@@ -43,6 +43,9 @@ npm run dev -- llm-check --provider all
 # Acceptance checks against both demo-shop bug branches.
 npm run check-analysis
 
+# Generation acceptance (live providers only; skipped without keys).
+npm run check-generation -- --runs 3
+
 npm run build
 ```
 
