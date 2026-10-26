@@ -9,6 +9,15 @@ import { config } from 'dotenv';
 import { z } from 'zod';
 import { analyzeRepo } from './analysis/analyze';
 import { generateTests, type GenerationRun } from './generate/engine';
+import { verifyTest } from './runner/verify';
+import {
+  parsePositiveInt,
+  printVerificationSummary,
+  readGeneratedDirectory,
+  verifyGeneratedRun,
+  writeVerification
+} from './runner/verifyOutput';
+import type { VerificationResult } from './runner/schema';
 import {
   AnalysisReportSchema,
   type AnalysisReport,
@@ -100,6 +109,10 @@ program
   .option('--max-scenarios <n>', 'number of scenarios to generate', '1')
   .option('--out <dir>', 'output root directory', './out/generated')
   .option('--no-cache', 'ignore cached analysis coverage')
+  .option('--skip-verify', 'skip the final verification step')
+  .option('--repeat <n>', 'runs per revision during verification', '3')
+  .option('--timeout <ms>', 'per-test timeout in milliseconds', '60000')
+  .option('--fixed <ref>', 'optional fixed revision for a three-way check')
   .action(async (options) => {
     const report = await analyzeRepo({
       repoPath: options.repo,
@@ -118,6 +131,95 @@ program
       outRoot: options.out
     });
     printGenerationSummary(run);
+
+    if (options.skipVerify) return;
+
+    const verifications = await verifyGeneratedRun({
+      repoPath: options.repo,
+      base: options.base,
+      head: options.head,
+      fixed: options.fixed,
+      report,
+      generation: run,
+      repeat: parsePositiveInt(options.repeat, 'repeat'),
+      timeoutMs: parsePositiveInt(options.timeout, 'timeout'),
+      outRoot: options.out
+    });
+
+    for (const verification of verifications) {
+      printVerificationSummary(verification);
+    }
+  });
+
+program
+  .command('verify')
+  .description('Verify a generated test against base, head and an optional fixed revision')
+  .requiredOption('--repo <path>', 'path to the target git repository')
+  .requiredOption('--base <ref>', 'base revision')
+  .requiredOption('--head <ref>', 'head revision')
+  .option('--fixed <ref>', 'optional fixed revision for a three-way check')
+  .option('--test <file>', 'a single test file to verify')
+  .option('--generated <dir>', 'a generated directory to verify')
+  .option('--analysis <path>', 'analysis report used for changed-code evidence')
+  .option('--repeat <n>', 'runs per revision', '3')
+  .option('--timeout <ms>', 'per-test timeout in milliseconds', '60000')
+  .option('--docker', 'run tests inside a container when docker is available')
+  .option('--out <dir>', 'output root directory', './out/verified')
+  .action(async (options) => {
+    if (!options.test && !options.generated) {
+      throw new Error('Provide --test <file> or --generated <dir>');
+    }
+
+    const report = options.analysis
+      ? AnalysisReportSchema.parse(
+          JSON.parse(await readFile(path.resolve(options.analysis), 'utf8'))
+        )
+      : undefined;
+
+    const repeat = parsePositiveInt(options.repeat, 'repeat');
+    const timeoutMs = parsePositiveInt(options.timeout, 'timeout');
+
+    if (options.test) {
+      const result = await verifyTest({
+        repoPath: options.repo,
+        base: options.base,
+        head: options.head,
+        fixed: options.fixed,
+        testFile: options.test,
+        analysisReport: report,
+        repeat,
+        timeoutMs,
+        docker: options.docker
+      });
+      await writeVerification(options.out, options.head, result);
+      printVerificationSummary(result);
+      return;
+    }
+
+    const generated = await readGeneratedDirectory(path.resolve(options.generated));
+    const verifications: VerificationResult[] = [];
+
+    for (const entry of generated) {
+      const result = await verifyTest({
+        repoPath: options.repo,
+        base: options.base,
+        head: options.head,
+        fixed: options.fixed,
+        testFile: entry.testFile,
+        analysisReport: report,
+        scenarioId: entry.scenarioId,
+        scenarioTitle: entry.scenarioTitle,
+        repeat,
+        timeoutMs,
+        docker: options.docker
+      });
+      verifications.push(result);
+      printVerificationSummary(result);
+    }
+
+    for (const verification of verifications) {
+      await writeVerification(options.out, options.head, verification);
+    }
   });
 
 program

@@ -2,14 +2,14 @@
  * Renders the human-readable TestPilot verdict.
  */
 
-import type { VerifyResult } from '../runner/verify';
+import type { VerificationResult } from '../runner/schema';
 
 export interface ReportInput {
   repo: string;
   base: string;
   head: string;
   testPath: string;
-  result: VerifyResult;
+  result: VerificationResult;
 }
 
 export function renderMarkdownReport(_input: ReportInput): string {
