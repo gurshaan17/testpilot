@@ -5,6 +5,7 @@
 import path from 'node:path';
 import type { AnalysisReport } from '../analysis/schema';
 import { createWorktree, type Worktree } from './worktree';
+import { createPatchedWorktree, type PatchStats } from './patch';
 import { runExistingSuite } from './existingSuite';
 import { findChangedLineHits } from './changedEvidence';
 import { runTestOnRevision } from './runTest';
@@ -23,6 +24,7 @@ export interface VerifyTestOptions {
   base: string;
   head: string;
   fixed?: string;
+  fixedPatch?: string;
   testFile: string;
   analysisReport?: AnalysisReport;
   repeat?: number;
@@ -123,9 +125,26 @@ export async function verifyTest(
 
   const baseWorktree = await createWorktree(repoPath, options.base);
   const headWorktree = await createWorktree(repoPath, options.head);
-  const fixedWorktree = options.fixed
-    ? await createWorktree(repoPath, options.fixed)
-    : undefined;
+
+  let fixedWorktree: Worktree | undefined;
+  let patchFailure: string | undefined;
+  let fixedPatchStats: PatchStats | undefined;
+
+  if (options.fixedPatch) {
+    const patched = await createPatchedWorktree({
+      repoPath,
+      headRef: options.head,
+      patchText: options.fixedPatch
+    });
+    if (patched.ok) {
+      fixedWorktree = { dir: patched.dir, sha: patched.sha, cleanup: patched.cleanup };
+      fixedPatchStats = patched.patchStats;
+    } else {
+      patchFailure = patched.message;
+    }
+  } else if (options.fixed) {
+    fixedWorktree = await createWorktree(repoPath, options.fixed);
+  }
 
   try {
     const base = await runOnWorktree({
@@ -149,7 +168,7 @@ export async function verifyTest(
     const fixed = fixedWorktree
       ? await runOnWorktree({
           worktree: fixedWorktree,
-          ref: options.fixed as string,
+          ref: options.fixed ?? 'patched',
           testFile: options.testFile,
           repeat,
           timeoutMs,
@@ -161,6 +180,10 @@ export async function verifyTest(
       worktreeDir: headWorktree.dir,
       timeoutMs
     });
+
+    const fixedExisting = fixedWorktree
+      ? await runExistingSuite({ worktreeDir: fixedWorktree.dir, timeoutMs })
+      : undefined;
 
     let evidence = changedCodeEvidence({
       head,
@@ -194,6 +217,10 @@ export async function verifyTest(
       headFailureInChangedCode: evidence !== 'none'
     });
 
+    if (patchFailure) {
+      classification.reasons.push(`The fixed patch did not apply: ${patchFailure}`);
+    }
+
     const isolation: Isolation = existing.isolation;
 
     return VerificationResultSchema.parse({
@@ -203,9 +230,11 @@ export async function verifyTest(
       verdict: classification.verdict,
       confidence: classification.confidence,
       reasons: classification.reasons,
-      fixedCheck: classification.fixedCheck,
+      fixedCheck: patchFailure ? 'patch_failed' : classification.fixedCheck,
       revisions: { base, head, fixed },
       existingSuite: existing.suite,
+      fixedExistingSuite: fixedExisting?.suite,
+      fixedPatchStats,
       isolation,
       repeat,
       timeoutMs,

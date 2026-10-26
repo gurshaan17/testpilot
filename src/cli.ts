@@ -158,6 +158,7 @@ program
   .requiredOption('--base <ref>', 'base revision')
   .requiredOption('--head <ref>', 'head revision')
   .option('--fixed <ref>', 'optional fixed revision for a three-way check')
+  .option('--fixed-patch <file>', 'optional patch applied to head as the fixed revision')
   .option('--test <file>', 'a single test file to verify')
   .option('--generated <dir>', 'a generated directory to verify')
   .option('--analysis <path>', 'analysis report used for changed-code evidence')
@@ -169,6 +170,13 @@ program
     if (!options.test && !options.generated) {
       throw new Error('Provide --test <file> or --generated <dir>');
     }
+    if (options.fixed && options.fixedPatch) {
+      throw new Error('Use --fixed or --fixed-patch, not both');
+    }
+
+    const fixedPatch = options.fixedPatch
+      ? await readFile(path.resolve(options.fixedPatch), 'utf8')
+      : undefined;
 
     const report = options.analysis
       ? AnalysisReportSchema.parse(
@@ -185,6 +193,7 @@ program
         base: options.base,
         head: options.head,
         fixed: options.fixed,
+        fixedPatch,
         testFile: options.test,
         analysisReport: report,
         repeat,
@@ -205,6 +214,7 @@ program
         base: options.base,
         head: options.head,
         fixed: options.fixed,
+        fixedPatch,
         testFile: entry.testFile,
         analysisReport: report,
         scenarioId: entry.scenarioId,
