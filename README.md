@@ -46,6 +46,20 @@ npm run check-analysis
 # Generation acceptance (live providers only; skipped without keys).
 npm run check-generation -- --runs 3
 
+# Verify one test or a whole generated directory.
+npm run dev -- verify --repo ../demo-shop --base main --head bug/user-lean \
+  --test __testpilot__/some.testpilot.test.ts --analysis out/analysis.json
+npm run dev -- verify --repo ../demo-shop --base main --head bug/user-lean \
+  --generated out/generated/bug-user-lean --repeat 3
+
+# Analyze + generate + verify in one command.
+npm run dev -- run --repo ../demo-shop --base main --head bug/user-lean \
+  --max-scenarios 1 --out out/generated
+
+# Runner controls and end-to-end LLM evidence.
+npm run check-verification
+npm run e2e-verification
+
 npm run build
 ```
 
@@ -61,6 +75,26 @@ are retried up to three times with the exact error. Valid tests are written to
 `<out>/<sanitized-head>/__testpilot__/`; every run also writes `generation.json`
 and the exact prompts under `prompts/`. The analyzed repository's working tree
 is never modified.
+
+`run` then verifies each valid test. `verify` runs a test repeatedly on BASE,
+HEAD and an optional `--fixed` revision, records the existing suite on HEAD, and
+writes `<out>/<sanitized-head>/verification.json`. Every child process runs with
+a minimal environment, so provider keys are never visible to code under test.
+
+### Verdicts
+
+| Verdict | Meaning |
+| --- | --- |
+| `regression_caught` | Stable pass on base, stable behavioural fail on head (and on fixed, when supplied). |
+| `regression_caught_suspect` | Base passes and head fails, but the failure is a compile/timeout error, outside changed code, or still fails on fixed. |
+| `not_demonstrated_passes_both` | The test passes on both revisions, so it does not detect the change. |
+| `invalid_fails_on_base` | The test fails, errors or does not compile on base. |
+| `flaky` | The status changed across repeated runs on at least one revision. |
+| `inconclusive` | Infrastructure problem, such as a base timeout. |
+
+Confidence is `high` only for `regression_caught` with at least three stable runs
+on every revision and a failure location inside a changed file; `medium` when
+caught with fewer runs or no changed-file location; `low` for suspects.
 
 ## LLM providers
 
