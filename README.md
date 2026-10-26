@@ -29,11 +29,22 @@ npm run dev -- analyze --repo ../demo-shop --base main --head bug/user-lean
 npm run dev -- analyze --repo ../demo-shop --base main --head bug/user-lean \
   --out report.json --json --no-cache
 
+# Generate tests from a saved report.
+npm run dev -- generate --analysis out/analysis.json --repo ../demo-shop \
+  --base main --head bug/user-lean --max-scenarios 1
+
+# Analyze and generate in one command.
+npm run dev -- run --repo ../demo-shop --base main --head bug/user-lean \
+  --provider anthropic --max-scenarios 1
+
 # Check which configured providers can complete a trivial structured call.
 npm run dev -- llm-check --provider all
 
 # Acceptance checks against both demo-shop bug branches.
 npm run check-analysis
+
+# Generation acceptance (live providers only; skipped without keys).
+npm run check-generation -- --runs 3
 
 npm run build
 ```
@@ -43,6 +54,13 @@ each Jest test file in isolation for per-test coverage, builds the caller graph
 up to depth 2, and cleans up the worktree on success or failure. Coverage
 results are cached by HEAD SHA in `.testpilot-cache/`; pass `--no-cache` to
 ignore the cache.
+
+`generate`/`run` plan up to three scenarios, generate one Jest test per selected
+scenario, then validate it on BASE with `tsc --noEmit` and Jest. Failed attempts
+are retried up to three times with the exact error. Valid tests are written to
+`<out>/<sanitized-head>/__testpilot__/`; every run also writes `generation.json`
+and the exact prompts under `prompts/`. The analyzed repository's working tree
+is never modified.
 
 ## LLM providers
 
