@@ -1,58 +1,234 @@
+#!/usr/bin/env node
 /**
- * TestPilot CLI entry point.
- * Parses `testpilot analyze --repo <path> --base <ref> --head <ref>` only;
- * wiring the pipeline together comes later.
+ * TestPilot CLI: deterministic analysis plus an optional LLM connectivity check.
  */
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { Command } from 'commander';
+import { config } from 'dotenv';
+import { z } from 'zod';
+import { analyzeRepo } from './analysis/analyze';
+import type { AnalysisReport, ImpactNode } from './analysis/schema';
+import {
+  generateStructured,
+  listAvailableProviders,
+  providerEnvKey,
+  resolveModel,
+  type ProviderName
+} from './llm/client';
 
-export interface AnalyzeOptions {
-  command: 'analyze';
-  repo: string;
-  base: string;
-  head: string;
-}
+config({ quiet: true });
 
-const USAGE = 'Usage: testpilot analyze --repo <path> --base <ref> --head <ref>';
+const PROVIDER_NAMES: ProviderName[] = ['anthropic', 'openai', 'google'];
 
-export function parseArgs(argv: string[]): AnalyzeOptions {
-  const [command, ...rest] = argv;
+const program = new Command();
+program
+  .name('testpilot')
+  .description('Generate and verify targeted regression tests')
+  .version('0.1.0');
 
-  if (command !== 'analyze') {
-    throw new Error(USAGE);
-  }
+program
+  .command('analyze')
+  .description('Analyze a change: changed functions, coverage, and callers')
+  .requiredOption('--repo <path>', 'path to the target git repository')
+  .requiredOption('--base <ref>', 'base revision')
+  .requiredOption('--head <ref>', 'head revision')
+  .option('--out <path>', 'report output path', './out/analysis.json')
+  .option('--json', 'print the full report as JSON')
+  .option('--no-cache', 'ignore cached coverage results')
+  .action(async (options) => {
+    const report = await analyzeRepo({
+      repoPath: options.repo,
+      base: options.base,
+      head: options.head,
+      noCache: options.cache === false
+    });
 
-  const flags = new Map<string, string>();
-  for (let i = 0; i < rest.length; i += 2) {
-    const flag = rest[i];
-    const value = rest[i + 1];
+    const outPath = path.resolve(options.out);
+    await mkdir(path.dirname(outPath), { recursive: true });
+    await writeFile(outPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 
-    if (!flag?.startsWith('--') || value === undefined) {
-      throw new Error(USAGE);
+    if (options.json) {
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      printSummary(report);
+      console.log(`\nReport written to ${outPath}`);
     }
-    flags.set(flag.slice(2), value);
+  });
+
+program
+  .command('llm-check')
+  .description('Check configured LLM providers with a trivial structured call')
+  .option('--provider <name>', 'anthropic | openai | google | all', 'all')
+  .action(async (options) => {
+    await runLlmCheck(options.provider);
+  });
+
+function callersOf(changedId: string, report: AnalysisReport): ImpactNode[] {
+  const nodes = new Map(report.impactGraph.nodes.map((node) => [node.id, node]));
+  const found = new Map<string, ImpactNode>();
+
+  let frontier = [changedId];
+  for (let depth = 0; depth < 2; depth += 1) {
+    const next: string[] = [];
+    for (const edge of report.impactGraph.edges) {
+      if (!frontier.includes(edge.to)) continue;
+      const caller = nodes.get(edge.from);
+      if (caller && !found.has(caller.id)) {
+        found.set(caller.id, caller);
+        next.push(caller.id);
+      }
+    }
+    frontier = next;
   }
 
-  const repo = flags.get('repo');
-  const base = flags.get('base');
-  const head = flags.get('head');
+  return [...found.values()].sort((a, b) => a.depth - b.depth || a.name.localeCompare(b.name));
+}
 
-  if (!repo || !base || !head) {
-    throw new Error(USAGE);
+function printSummary(report: AnalysisReport): void {
+  const baselineFailures = report.baseline.failures.length;
+
+  console.log('TestPilot analysis');
+  console.log(`  repo: ${report.repo}`);
+  console.log(`  base: ${report.base.ref} (${report.base.sha.slice(0, 8)})`);
+  console.log(`  head: ${report.head.ref} (${report.head.sha.slice(0, 8)})`);
+  console.log(
+    `  baseline: ${report.baseline.testFiles.length} test files, ` +
+      `${baselineFailures} failing`
+  );
+
+  console.log(`\nChanged files (${report.changedFiles.length})`);
+  for (const file of report.changedFiles) {
+    const ranges = file.changedLineRanges
+      .map((range) => `${range.start}-${range.end}`)
+      .join(', ');
+    console.log(`  ${file.status.padEnd(8)} ${file.path}${ranges ? ` (${ranges})` : ''}`);
   }
 
-  return { command, repo, base, head };
-}
+  console.log(`\nChanged functions (${report.changedFunctions.length})`);
+  for (const fn of report.changedFunctions) {
+    console.log(`  ${fn.qualifiedName}  ${fn.file}:${fn.startLine}-${fn.endLine}`);
+    console.log(
+      `    changed lines: ${fn.changedLineCoverage.percentage}% covered` +
+        (fn.changedLineCoverage.uncoveredLines.length > 0
+          ? ` (uncovered: ${fn.changedLineCoverage.uncoveredLines.join(', ')})`
+          : '')
+    );
+    console.log(
+      `    covering tests: ${fn.coveringTests.length > 0 ? fn.coveringTests.join(', ') : 'none'}`
+    );
 
-export function main(argv: string[] = process.argv.slice(2)): void {
-  try {
-    const options = parseArgs(argv);
-    // The pipeline is intentionally not implemented in this skeleton.
-    console.log(JSON.stringify(options, null, 2));
-  } catch (error) {
-    console.error((error as Error).message);
-    process.exitCode = 1;
+    const callers = callersOf(
+      `${fn.qualifiedName}::${fn.file}`,
+      report
+    );
+    if (callers.length === 0) {
+      console.log('    callers: none found');
+    } else {
+      console.log('    callers:');
+      for (const caller of callers) {
+        const tests =
+          caller.coveringTests.length > 0 ? caller.coveringTests.join(', ') : 'NONE';
+        console.log(
+          `      [depth ${caller.depth}] ${caller.qualifiedName} ` +
+            `${caller.file}:${caller.startLine}  tests: ${tests}`
+        );
+      }
+    }
+  }
+
+  if (report.otherChanges.length > 0) {
+    console.log(`\nChanges outside functions (${report.otherChanges.length})`);
+    for (const change of report.otherChanges) {
+      console.log(`  ${change.file}:${change.range.start}-${change.range.end}`);
+    }
+  }
+
+  console.log(`\n${'='.repeat(64)}`);
+  if (report.callersWithoutTests.length === 0) {
+    console.log('No untested callers found.');
+  } else {
+    console.log(`!! CALLERS WITHOUT TESTS (${report.callersWithoutTests.length})`);
+    for (const node of report.callersWithoutTests) {
+      console.log(
+        `!! [depth ${node.depth}] ${node.qualifiedName}  ${node.file}:${node.startLine}`
+      );
+    }
+  }
+  console.log('='.repeat(64));
+
+  if (report.unresolvedReferences.length > 0) {
+    console.log(`\nUnresolved references (${report.unresolvedReferences.length})`);
+    for (const ref of report.unresolvedReferences) {
+      console.log(`  ${ref.from}: ${ref.file}:${ref.line} - ${ref.reason}`);
+    }
+  }
+
+  if (baselineFailures > 0) {
+    console.log('\nBaseline failures:');
+    for (const failure of report.baseline.failures) {
+      console.log(`  ${failure.file}`);
+    }
   }
 }
 
-if (require.main === module) {
-  main();
+async function runLlmCheck(requested: string): Promise<void> {
+  const providers: ProviderName[] =
+    requested === 'all'
+      ? PROVIDER_NAMES
+      : PROVIDER_NAMES.includes(requested as ProviderName)
+        ? [requested as ProviderName]
+        : [];
+
+  if (providers.length === 0) {
+    throw new Error(`Unknown provider "${requested}". Use anthropic, openai, google, or all.`);
+  }
+
+  const available = listAvailableProviders();
+  let failed = false;
+
+  console.log('Provider   Model                          Latency   Result');
+  console.log('---------  -----------------------------  --------  ------');
+
+  for (const provider of providers) {
+    if (!available.includes(provider)) {
+      console.log(
+        `${provider.padEnd(9)}  ${'-'.padEnd(29)}  ${'-'.padEnd(8)}  ` +
+          `SKIPPED (${providerEnvKey(provider)} not set)`
+      );
+      continue;
+    }
+
+    const startedAt = Date.now();
+    const resolved = resolveModel(provider);
+    try {
+      const result = await generateStructured({
+        provider,
+        model: resolved.modelId,
+        system: 'You are a connectivity check. Answer with JSON only.',
+        prompt: 'Reply with the word ok',
+        schema: z.object({ answer: z.string() }),
+        temperature: 0
+      });
+      const latency = Date.now() - startedAt;
+      console.log(
+        `${provider.padEnd(9)}  ${result.model.padEnd(29)}  ` +
+          `${`${latency}ms`.padEnd(8)}  PASS`
+      );
+    } catch (error) {
+      const latency = Date.now() - startedAt;
+      failed = true;
+      console.log(
+        `${provider.padEnd(9)}  ${resolved.modelId.padEnd(29)}  ${`${latency}ms`.padEnd(8)}  FAIL: ` +
+          `${(error as Error).message}`
+      );
+    }
+  }
+
+  if (failed) process.exitCode = 1;
 }
+
+program.parseAsync(process.argv).catch((error: unknown) => {
+  console.error((error as Error).message);
+  process.exitCode = 1;
+});

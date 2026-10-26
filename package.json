@@ -5,11 +5,24 @@
   "description": "AI agent that generates and verifies targeted regression tests",
   "scripts": {
     "dev": "tsx src/cli.ts",
-    "build": "tsc --noEmit"
+    "build": "tsc --noEmit",
+    "check-analysis": "tsx scripts/check-analysis.ts"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
-  }
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.88",
+    "@ai-sdk/google": "^4.0.105",
+    "@ai-sdk/openai": "^4.0.102",
+    "ai": "^7.0.153",
+    "commander": "^15.0.0",
+    "dotenv": "^18.0.9",
+    "execa": "^10.2.1",
+    "ts-morph": "^28.0.0",
+    "zod": "^4.6.7"
+  },
+  "type": "module"
 }
