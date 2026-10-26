@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx src/cli.ts",
     "build": "tsc --noEmit",
-    "check-analysis": "tsx scripts/check-analysis.ts"
+    "check-analysis": "tsx scripts/check-analysis.ts",
+    "test": "tsx --test src/generate/*.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
