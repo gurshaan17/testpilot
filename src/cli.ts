@@ -2,13 +2,18 @@
 /**
  * TestPilot CLI: deterministic analysis plus an optional LLM connectivity check.
  */
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Command } from 'commander';
 import { config } from 'dotenv';
 import { z } from 'zod';
 import { analyzeRepo } from './analysis/analyze';
-import type { AnalysisReport, ImpactNode } from './analysis/schema';
+import { generateTests, type GenerationRun } from './generate/engine';
+import {
+  AnalysisReportSchema,
+  type AnalysisReport,
+  type ImpactNode
+} from './analysis/schema';
 import {
   generateStructured,
   listAvailableProviders,
@@ -57,6 +62,65 @@ program
   });
 
 program
+  .command('generate')
+  .description('Generate and base-validate regression tests from an analysis report')
+  .requiredOption('--analysis <path>', 'path to an AnalysisReport JSON file')
+  .requiredOption('--repo <path>', 'path to the target git repository')
+  .requiredOption('--base <ref>', 'base revision')
+  .requiredOption('--head <ref>', 'head revision')
+  .option('--provider <name>', 'anthropic | openai | google')
+  .option('--model <id>', 'override the provider model id')
+  .option('--max-scenarios <n>', 'number of scenarios to generate', '1')
+  .option('--out <dir>', 'output root directory', './out/generated')
+  .action(async (options) => {
+    const report = AnalysisReportSchema.parse(
+      JSON.parse(await readFile(path.resolve(options.analysis), 'utf8'))
+    );
+    const run = await generateTests({
+      repoPath: options.repo,
+      base: options.base,
+      head: options.head,
+      report,
+      provider: parseProvider(options.provider),
+      model: options.model,
+      maxScenarios: parseMaxScenarios(options.maxScenarios),
+      outRoot: options.out
+    });
+    printGenerationSummary(run);
+  });
+
+program
+  .command('run')
+  .description('Analyze a change and generate tests in one command')
+  .requiredOption('--repo <path>', 'path to the target git repository')
+  .requiredOption('--base <ref>', 'base revision')
+  .requiredOption('--head <ref>', 'head revision')
+  .option('--provider <name>', 'anthropic | openai | google')
+  .option('--model <id>', 'override the provider model id')
+  .option('--max-scenarios <n>', 'number of scenarios to generate', '1')
+  .option('--out <dir>', 'output root directory', './out/generated')
+  .option('--no-cache', 'ignore cached analysis coverage')
+  .action(async (options) => {
+    const report = await analyzeRepo({
+      repoPath: options.repo,
+      base: options.base,
+      head: options.head,
+      noCache: options.cache === false
+    });
+    const run = await generateTests({
+      repoPath: options.repo,
+      base: options.base,
+      head: options.head,
+      report,
+      provider: parseProvider(options.provider),
+      model: options.model,
+      maxScenarios: parseMaxScenarios(options.maxScenarios),
+      outRoot: options.out
+    });
+    printGenerationSummary(run);
+  });
+
+program
   .command('llm-check')
   .description('Check configured LLM providers with a trivial structured call')
   .option('--provider <name>', 'anthropic | openai | google | all', 'all')
@@ -83,6 +147,51 @@ function callersOf(changedId: string, report: AnalysisReport): ImpactNode[] {
   }
 
   return [...found.values()].sort((a, b) => a.depth - b.depth || a.name.localeCompare(b.name));
+}
+
+function parseProvider(value?: string): ProviderName | undefined {
+  if (!value) return undefined;
+  if (value === 'anthropic' || value === 'openai' || value === 'google') return value;
+  throw new Error(`Unknown provider "${value}". Use anthropic, openai, or google.`);
+}
+
+function parseMaxScenarios(value: string): number {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 3) {
+    throw new Error('--max-scenarios must be an integer from 1 to 3');
+  }
+  return parsed;
+}
+
+function printGenerationSummary(run: GenerationRun): void {
+  console.log('Test generation');
+  console.log(`  output: ${run.outDir}`);
+  console.log(`  provider/model: ${run.provider || 'unknown'} / ${run.model || 'unknown'}`);
+  console.log(`  prompt version: ${run.promptVersion}`);
+  console.log(`  scenarios: ${run.scenarios.length}`);
+
+  for (const scenario of run.scenarios) {
+    const attempts = scenario.attempts.length;
+    const headPreview = scenario.headPreview
+      ? `  head preview: ${scenario.headPreview.passed ? 'PASS' : 'FAIL'} (informational)`
+      : '';
+    if (scenario.status === 'valid') {
+      console.log(
+        `  [valid] ${scenario.title} (${attempts} attempt(s)) -> ${scenario.fileName}`
+      );
+      console.log(headPreview);
+    } else {
+      const reason = (scenario.finalError ?? 'unknown error').split('\n')[0].slice(0, 200);
+      console.log(
+        `  [invalid] ${scenario.title} (${attempts} attempt(s)): ${reason}`
+      );
+    }
+  }
+
+  if (run.scenarios.every((scenario) => scenario.status !== 'valid')) {
+    console.log('  No valid tests were produced.');
+  }
+  console.log(`  generation log: ${run.generationPath}`);
 }
 
 function printSummary(report: AnalysisReport): void {
