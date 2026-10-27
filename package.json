@@ -16,7 +16,9 @@
     "demo": "tsx scripts/demo.ts",
     "mcp": "tsx src/mcp/server.ts",
     "check-alan-integration": "tsx scripts/check-alan-integration.ts",
-    "demo:report": "tsx scripts/demo-report.ts"
+    "demo:report": "tsx scripts/demo-report.ts",
+    "preflight": "tsx scripts/preflight.ts",
+    "final-check": "tsx scripts/final-check.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
