@@ -1,0 +1,126 @@
+{
+  "generatedAt": "2026-10-27T08:23:29.105Z",
+  "metrics": [
+    {
+      "metric": "verification-controls.md controls passed",
+      "value": "11/11",
+      "numerator": 11,
+      "denominator": 11,
+      "n": 11,
+      "source": "docs/verification-controls.md"
+    },
+    {
+      "metric": "repair-controls.md controls passed",
+      "value": "9/9",
+      "numerator": 9,
+      "denominator": 9,
+      "n": 9,
+      "source": "docs/repair-controls.md"
+    },
+    {
+      "metric": "alan-integration.md controls passed",
+      "value": "21/21",
+      "numerator": 21,
+      "denominator": 21,
+      "n": 21,
+      "source": "docs/alan-integration.md"
+    },
+    {
+      "metric": "repair guard rejection controls",
+      "value": 3,
+      "numerator": 3,
+      "denominator": 9,
+      "n": 9,
+      "source": "docs/repair-controls.md"
+    },
+    {
+      "metric": "patch_failed controls",
+      "value": 1,
+      "numerator": 1,
+      "denominator": 9,
+      "n": 9,
+      "source": "docs/repair-controls.md"
+    },
+    {
+      "metric": "regression_caught",
+      "value": "4/4",
+      "numerator": 4,
+      "denominator": 4,
+      "n": 4,
+      "source": "docs/loop-results.md"
+    },
+    {
+      "metric": "fixed",
+      "value": 0,
+      "numerator": 0,
+      "denominator": 4,
+      "n": 4,
+      "source": "docs/loop-results.md"
+    },
+    {
+      "metric": "fixed_by_revert",
+      "value": 4,
+      "numerator": 4,
+      "denominator": 4,
+      "n": 4,
+      "source": "docs/loop-results.md"
+    },
+    {
+      "metric": "average repair attempts",
+      "value": 1,
+      "n": 4,
+      "source": "docs/loop-results.md"
+    },
+    {
+      "metric": "total tokens across runs",
+      "value": 64685,
+      "n": 4,
+      "source": "docs/loop-results.md"
+    },
+    {
+      "metric": "tokens per run",
+      "value": "15684, 22249, 13737, 13015",
+      "n": 4,
+      "source": "docs/loop-results.md"
+    },
+    {
+      "metric": "average generate wall-clock",
+      "value": "56261 ms",
+      "n": 4,
+      "source": "docs/loop-results.md"
+    },
+    {
+      "metric": "average repair wall-clock",
+      "value": "30797 ms",
+      "n": 4,
+      "source": "docs/loop-results.md"
+    },
+    {
+      "metric": "average verify wall-clock",
+      "value": "12804 ms",
+      "n": 4,
+      "source": "docs/loop-results.md"
+    },
+    {
+      "metric": "average analyze wall-clock",
+      "value": "717 ms",
+      "n": 4,
+      "source": "docs/loop-results.md"
+    },
+    {
+      "metric": "valid generated tests",
+      "value": "4/4",
+      "numerator": 4,
+      "denominator": 4,
+      "n": 4,
+      "source": "docs/e2e-verification-results.md"
+    },
+    {
+      "metric": "generation acceptance run",
+      "value": "blocked at the time (no provider keys)",
+      "n": 0,
+      "source": "docs/generation-results.md",
+      "note": "Superseded by the later live loop runs; recorded here for honesty."
+    }
+  ]
+}

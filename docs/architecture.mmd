@@ -1,0 +1,10 @@
+flowchart LR
+  A["PR or branch diff<br/>base...head"] --> B["Analysis engine<br/>git diff · ts-morph · per-test coverage"]
+  B --> C["LLM planning and generation<br/>Vercel AI SDK · Anthropic / OpenAI / Google"]
+  C --> D["Sandboxed verification runner<br/>temp worktrees · scrubbed env · Jest JSON"]
+  D -->|"pass on base, fail on head"| E["Repair agent<br/>source-only guards · test hash"]
+  D -->|"not demonstrated"| G["Report<br/>markdown · HTML · PR comment"]
+  E --> F["Re-verify the patched code<br/>test passes · existing suite green"]
+  F --> G
+  G --> H["MCP server and SKILL.md<br/>Alan tools"]
+  F --> H
