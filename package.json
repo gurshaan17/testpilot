@@ -7,13 +7,14 @@
     "dev": "tsx src/cli.ts",
     "build": "tsc --noEmit",
     "check-analysis": "tsx scripts/check-analysis.ts",
-    "test": "tsx --test --test-concurrency=1 src/generate/*.test.ts src/runner/*.test.ts src/repair/*.test.ts src/store/*.test.ts src/report/*.test.ts",
+    "test": "tsx --test --test-concurrency=1 src/generate/*.test.ts src/runner/*.test.ts src/repair/*.test.ts src/store/*.test.ts src/report/*.test.ts src/mcp/*.test.ts",
     "check-generation": "tsx scripts/check-generation.ts",
     "check-verification": "tsx scripts/check-verification.ts",
     "e2e-verification": "tsx scripts/e2e-verification.ts",
     "check-repair": "tsx scripts/check-repair.ts",
     "e2e-loop": "tsx scripts/e2e-loop.ts",
-    "demo": "tsx scripts/demo.ts"
+    "demo": "tsx scripts/demo.ts",
+    "mcp": "tsx src/mcp/server.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
@@ -32,5 +33,8 @@
     "ts-morph": "^28.0.0",
     "zod": "^4.6.7"
   },
-  "type": "module"
+  "type": "module",
+  "bin": {
+    "testpilot-mcp": "bin/testpilot-mcp.mjs"
+  }
 }

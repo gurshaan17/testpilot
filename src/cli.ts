@@ -31,6 +31,7 @@ import { importRunsFrom, runDir } from './store/runs';
 import { renderMarkdownReport, renderPrComment } from './report/markdown';
 import { renderHtmlReport } from './report/html';
 import { startServer } from './server';
+import { startMcpServer } from './mcp/server';
 import {
   AnalysisReportSchema,
   type AnalysisReport,
@@ -332,6 +333,18 @@ program
     };
     process.once('SIGINT', shutdown);
     process.once('SIGTERM', shutdown);
+  });
+
+program
+  .command('mcp')
+  .description('Start the TestPilot MCP server (stdio by default)')
+  .option('--http', 'use streamable HTTP on 127.0.0.1 instead of stdio')
+  .option('--port <port>', 'HTTP port', '4318')
+  .action(async (options) => {
+    await startMcpServer({
+      http: options.http === true,
+      port: parsePositiveInt(options.port, 'port')
+    });
   });
 
 program
