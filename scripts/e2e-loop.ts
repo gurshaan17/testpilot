@@ -91,6 +91,31 @@ function summarize(records: RunRecord[]) {
   return { caught, fixed, reverted, attemptsAvg: records.length ? attemptTotal / records.length : 0, tokens, ms };
 }
 
+function stageTable(records: RunRecord[]): string {
+  const totals = new Map<string, { ms: number; count: number }>();
+  for (const record of records) {
+    for (const stage of record.stages ?? []) {
+      const key = stage.stage.replace(/:[^:]+$/, '');
+      const entry = totals.get(key) ?? { ms: 0, count: 0 };
+      entry.ms += stage.durationMs;
+      entry.count += 1;
+      totals.set(key, entry);
+    }
+  }
+
+  const header = ['Stage'.padEnd(12), 'Runs'.padEnd(6), 'Avg ms'.padEnd(10), 'Total ms'].join('  ');
+  const lines = [header, '-'.repeat(header.length)];
+  for (const [stage, entry] of [...totals.entries()].sort((a, b) => b[1].ms - a[1].ms)) {
+    lines.push([
+      stage.padEnd(12),
+      String(entry.count).padEnd(6),
+      String(Math.round(entry.ms / entry.count)).padEnd(10),
+      String(entry.ms)
+    ].join('  '));
+  }
+  return lines.join('\n');
+}
+
 function table(records: RunRecord[]): string {
   const header = [
     'Branch'.padEnd(25), 'Run'.padEnd(4), 'Verdict'.padEnd(20), 'Repair'.padEnd(17),
@@ -278,6 +303,12 @@ async function main(): Promise<void> {
     '```',
     '',
     `caught ${overall.caught}/${records.length}, fixed ${overall.fixed}, fixed_by_revert ${overall.reverted}, avg attempts ${overall.attemptsAvg.toFixed(1)}, tokens ${overall.tokens}.`,
+    '',
+    '## Wall-clock time per stage',
+    '',
+    '```text',
+    stageTable(records),
+    '```',
     '',
     '## Worked examples',
     '',

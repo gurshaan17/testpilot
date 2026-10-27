@@ -1,6 +1,6 @@
 # Loop results
 
-Generated: 2026-10-27T04:26:11.735Z
+Generated: 2026-10-27T04:49:18.915Z
 
 Providers run: google. Skipped: ANTHROPIC_API_KEY, OPENAI_API_KEY.
 
@@ -16,6 +16,17 @@ bug/user-lean              2     regression_caught     fixed_by_revert    1     
 ```
 
 caught 4/4, fixed 0, fixed_by_revert 4, avg attempts 1.0, tokens 64685.
+
+## Wall-clock time per stage
+
+```text
+Stage         Runs    Avg ms      Total ms
+------------------------------------------
+generate      4       56261       225043
+repair        4       30797       123186
+verify        4       12804       51215
+analyze       4       717         2867
+```
 
 ## Worked examples
 
