@@ -37,6 +37,8 @@ export interface GenerateOptions {
   model?: string;
   maxScenarios?: number;
   outRoot?: string;
+  /** Exact output directory, overriding outRoot/<sanitized-head>. */
+  outDir?: string;
   deps?: GenerateDeps;
 }
 
@@ -109,10 +111,9 @@ export async function generateTests(options: GenerateOptions): Promise<Generatio
   const head = await createWorktree(repoPath, options.head);
 
   try {
-    const runDir = path.resolve(
-      options.outRoot ?? './out/generated',
-      sanitizeRef(options.head)
-    );
+    const runDir = options.outDir
+      ? path.resolve(options.outDir)
+      : path.resolve(options.outRoot ?? './out/generated', sanitizeRef(options.head));
     const promptFiles: PromptFile[] = [];
     const droppedEvidence: DroppedEvidence[] = [];
     const usage: UsageTotals = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };

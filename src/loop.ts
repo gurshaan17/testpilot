@@ -16,6 +16,8 @@ import { repairRegression } from './repair/loop';
 import type { RepairResult } from './repair/schema';
 import { applyFixToClone } from './repair/clone';
 import { printLoopSummary } from './loopReport';
+import { createRun, runDir, updateRun } from './store/runs';
+import type { RunRecord } from './store/schema';
 
 export interface TimelineEvent {
   stage: string;
@@ -42,6 +44,7 @@ export interface LoopOptions {
 }
 
 export interface LoopResult {
+  run: RunRecord;
   outDir: string;
   analysis: AnalysisReport;
   generation: GenerationRun;
@@ -55,9 +58,18 @@ export interface LoopResult {
 export async function runLoop(options: LoopOptions): Promise<LoopResult> {
   const log = options.log ?? ((line: string) => console.log(line));
   const repoPath = path.resolve(options.repoPath);
-  const outRoot = options.out ?? './out/loop';
+  if (options.out) process.env.TESTPILOT_RUNS_DIR = path.resolve(options.out);
   const events: TimelineEvent[] = [];
   const startedAll = Date.now();
+
+  const run = await createRun({
+    repoPath,
+    base: options.base,
+    head: options.head,
+    provider: options.provider,
+    model: options.model
+  });
+  const outDir = runDir(run.runId);
 
   const stage = async <T>(
     name: string,
@@ -88,10 +100,17 @@ export async function runLoop(options: LoopOptions): Promise<LoopResult> {
         at: new Date().toISOString()
       });
       log(`[${name}] failed in ${durationMs}ms - ${(error as Error).message}`);
+      await updateRun(run.runId, {
+        status: 'failed',
+        stage: name,
+        finishedAt: new Date().toISOString(),
+        error: (error as Error).message
+      });
       throw error;
     }
   };
 
+  await updateRun(run.runId, { stage: 'analyze' });
   const analysis = await stage(
     'analyze',
     () =>
@@ -104,7 +123,9 @@ export async function runLoop(options: LoopOptions): Promise<LoopResult> {
     (report) => `${report.changedFunctions.length} changed function(s)`
   );
 
-  const outDir = path.resolve(outRoot, sanitizeRef(options.head));
+  await mkdir(outDir, { recursive: true });
+  await writeFile(path.join(outDir, 'analysis.json'), `${JSON.stringify(analysis, null, 2)}\n`, 'utf8');
+  await updateRun(run.runId, { stage: 'generate' });
   const generation = await stage(
     'generate',
     () =>
@@ -116,7 +137,7 @@ export async function runLoop(options: LoopOptions): Promise<LoopResult> {
         provider: options.provider,
         model: options.model,
         maxScenarios: options.maxScenarios ?? 1,
-        outRoot
+        outDir
       }),
     (run) => `${run.scenarios.filter((scenario) => scenario.status === 'valid').length} valid test(s)`
   );
@@ -124,6 +145,12 @@ export async function runLoop(options: LoopOptions): Promise<LoopResult> {
   const validScenarios = generation.scenarios.filter(
     (scenario) => scenario.status === 'valid' && scenario.fileName
   );
+
+  await updateRun(run.runId, {
+    stage: 'verify',
+    provider: generation.provider,
+    model: generation.model
+  });
 
   const verifications: VerificationResult[] = [];
   for (const scenario of validScenarios) {
@@ -151,6 +178,8 @@ export async function runLoop(options: LoopOptions): Promise<LoopResult> {
       'utf8'
     );
   }
+
+  await updateRun(run.runId, { stage: 'repair' });
 
   const repairs: RepairResult[] = [];
   for (const verification of verifications) {
@@ -183,6 +212,7 @@ export async function runLoop(options: LoopOptions): Promise<LoopResult> {
   const exitCode = fixed ? 0 : caught ? 2 : 3;
 
   const result: LoopResult = {
+    run,
     outDir,
     analysis,
     generation,
@@ -214,6 +244,18 @@ export async function runLoop(options: LoopOptions): Promise<LoopResult> {
     )}\n`,
     'utf8'
   );
+
+  const finalVerdict = verifications[0]?.verdict;
+  const finalRepair = repairs[0]?.status;
+  await updateRun(run.runId, {
+    status: 'done',
+    stage: 'complete',
+    finishedAt: new Date().toISOString(),
+    verdict: finalVerdict,
+    repairStatus: finalRepair,
+    provider: generation.provider,
+    model: generation.model
+  });
 
   printLoopSummary({ result, log });
   return result;
