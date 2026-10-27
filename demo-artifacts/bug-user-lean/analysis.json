@@ -1,0 +1,158 @@
+{
+  "repo": "/Users/gurshaansinghdult/Developer/testpilot/demo-shop",
+  "base": {
+    "ref": "main",
+    "sha": "b62bb53107a2baceeccab4e62d3cafc3780d2fcc"
+  },
+  "head": {
+    "ref": "bug/user-lean",
+    "sha": "15bade1787a76e6f40f11339bca56593432f14b6"
+  },
+  "generatedAt": "2026-10-27T05:49:02.096Z",
+  "baseline": {
+    "testFiles": [
+      {
+        "file": "src/api/checkoutHandler.test.ts",
+        "passed": true,
+        "durationMs": 12255
+      },
+      {
+        "file": "src/api/retryPayment.test.ts",
+        "passed": true,
+        "durationMs": 12590
+      },
+      {
+        "file": "src/auth/authService.test.ts",
+        "passed": true,
+        "durationMs": 12187
+      },
+      {
+        "file": "src/orders/orderService.test.ts",
+        "passed": true,
+        "durationMs": 12365
+      },
+      {
+        "file": "src/payments/processPayment.test.ts",
+        "passed": true,
+        "durationMs": 4955
+      },
+      {
+        "file": "src/users/userRepository.test.ts",
+        "passed": true,
+        "durationMs": 4861
+      }
+    ],
+    "failures": []
+  },
+  "changedFiles": [
+    {
+      "path": "src/users/userRepository.ts",
+      "status": "modified",
+      "changedLineRanges": [
+        {
+          "start": 36,
+          "end": 36
+        }
+      ],
+      "diff": "diff --git a/src/users/userRepository.ts b/src/users/userRepository.ts\nindex 9767e19..2420089 100644\n--- a/src/users/userRepository.ts\n+++ b/src/users/userRepository.ts\n@@ -36 +36 @@ export async function getUser(userId: string): Promise<User> {\n-  return findById(userId);\n+  return findById(userId).lean();"
+    }
+  ],
+  "changedTestFiles": [],
+  "changedFunctions": [
+    {
+      "name": "getUser",
+      "qualifiedName": "userRepository.getUser",
+      "file": "src/users/userRepository.ts",
+      "startLine": 35,
+      "endLine": 37,
+      "signature": "export async function getUser(userId: string): Promise<User>",
+      "diff": "@@ -36 +36 @@ export async function getUser(userId: string): Promise<User> {\n-  return findById(userId);\n+  return findById(userId).lean();",
+      "changedLineCoverage": {
+        "percentage": 100,
+        "coveredLines": [
+          36
+        ],
+        "uncoveredLines": []
+      },
+      "coveringTests": [
+        "src/auth/authService.test.ts",
+        "src/users/userRepository.test.ts"
+      ]
+    }
+  ],
+  "otherChanges": [],
+  "impactGraph": {
+    "nodes": [
+      {
+        "id": "userRepository.getUser::src/users/userRepository.ts",
+        "name": "getUser",
+        "qualifiedName": "userRepository.getUser",
+        "file": "src/users/userRepository.ts",
+        "startLine": 35,
+        "endLine": 37,
+        "depth": 0,
+        "coveringTests": [
+          "src/auth/authService.test.ts",
+          "src/users/userRepository.test.ts"
+        ],
+        "testNameMatches": [
+          "src/users/userRepository.test.ts"
+        ]
+      },
+      {
+        "id": "authService.login::src/auth/authService.ts",
+        "name": "login",
+        "qualifiedName": "authService.login",
+        "file": "src/auth/authService.ts",
+        "startLine": 7,
+        "endLine": 18,
+        "depth": 1,
+        "coveringTests": [
+          "src/auth/authService.test.ts"
+        ],
+        "testNameMatches": [
+          "src/auth/authService.test.ts"
+        ]
+      },
+      {
+        "id": "userProfileService.getPublicProfile::src/users/userProfileService.ts",
+        "name": "getPublicProfile",
+        "qualifiedName": "userProfileService.getPublicProfile",
+        "file": "src/users/userProfileService.ts",
+        "startLine": 3,
+        "endLine": 8,
+        "depth": 1,
+        "coveringTests": [],
+        "testNameMatches": []
+      }
+    ],
+    "edges": [
+      {
+        "from": "userProfileService.getPublicProfile::src/users/userProfileService.ts",
+        "to": "userRepository.getUser::src/users/userRepository.ts",
+        "file": "src/users/userProfileService.ts",
+        "line": 6
+      },
+      {
+        "from": "authService.login::src/auth/authService.ts",
+        "to": "userRepository.getUser::src/users/userRepository.ts",
+        "file": "src/auth/authService.ts",
+        "line": 8
+      }
+    ]
+  },
+  "callersWithoutTests": [
+    {
+      "id": "userProfileService.getPublicProfile::src/users/userProfileService.ts",
+      "name": "getPublicProfile",
+      "qualifiedName": "userProfileService.getPublicProfile",
+      "file": "src/users/userProfileService.ts",
+      "startLine": 3,
+      "endLine": 8,
+      "depth": 1,
+      "coveringTests": [],
+      "testNameMatches": []
+    }
+  ],
+  "unresolvedReferences": []
+}

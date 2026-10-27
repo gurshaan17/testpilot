@@ -5,6 +5,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Command } from 'commander';
+import { execa } from 'execa';
 import { config } from 'dotenv';
 import { z } from 'zod';
 import { analyzeRepo } from './analysis/analyze';
@@ -26,6 +27,12 @@ import {
   writeVerification
 } from './runner/verifyOutput';
 import type { VerificationResult } from './runner/schema';
+import { runPipeline } from './runCommand';
+import { importRunsFrom, runDir } from './store/runs';
+import { renderMarkdownReport, renderPrComment } from './report/markdown';
+import { renderHtmlReport } from './report/html';
+import { startServer } from './server';
+import { startMcpServer } from './mcp/server';
 import {
   AnalysisReportSchema,
   type AnalysisReport,
@@ -93,7 +100,7 @@ program
     const report = AnalysisReportSchema.parse(
       JSON.parse(await readFile(path.resolve(options.analysis), 'utf8'))
     );
-    const run = await generateTests({
+    const generation = await generateTests({
       repoPath: options.repo,
       base: options.base,
       head: options.head,
@@ -103,7 +110,7 @@ program
       maxScenarios: parseMaxScenarios(options.maxScenarios),
       outRoot: options.out
     });
-    printGenerationSummary(run);
+    printGenerationSummary(generation);
   });
 
 program
@@ -115,48 +122,33 @@ program
   .option('--provider <name>', 'anthropic | openai | google')
   .option('--model <id>', 'override the provider model id')
   .option('--max-scenarios <n>', 'number of scenarios to generate', '1')
-  .option('--out <dir>', 'output root directory', './out/generated')
+  .option('--out <dir>', 'run store root directory', './out/runs')
   .option('--no-cache', 'ignore cached analysis coverage')
   .option('--skip-verify', 'skip the final verification step')
   .option('--repeat <n>', 'runs per revision during verification', '3')
   .option('--timeout <ms>', 'per-test timeout in milliseconds', '60000')
   .option('--fixed <ref>', 'optional fixed revision for a three-way check')
   .action(async (options) => {
-    const report = await analyzeRepo({
+    const result = await runPipeline({
       repoPath: options.repo,
       base: options.base,
       head: options.head,
-      noCache: options.cache === false
-    });
-    const run = await generateTests({
-      repoPath: options.repo,
-      base: options.base,
-      head: options.head,
-      report,
       provider: parseProvider(options.provider),
       model: options.model,
       maxScenarios: parseMaxScenarios(options.maxScenarios),
-      outRoot: options.out
-    });
-    printGenerationSummary(run);
-
-    if (options.skipVerify) return;
-
-    const verifications = await verifyGeneratedRun({
-      repoPath: options.repo,
-      base: options.base,
-      head: options.head,
-      fixed: options.fixed,
-      report,
-      generation: run,
+      out: options.out,
+      noCache: options.cache === false,
+      skipVerify: options.skipVerify,
       repeat: parsePositiveInt(options.repeat, 'repeat'),
       timeoutMs: parsePositiveInt(options.timeout, 'timeout'),
-      outRoot: options.out
+      fixed: options.fixed
     });
 
-    for (const verification of verifications) {
+    printGenerationSummary(result.generation);
+    for (const verification of result.verifications) {
       printVerificationSummary(verification);
     }
+    console.log(`\nRun: ${result.run.runId}`);
   });
 
 program
@@ -252,7 +244,7 @@ program
   .option('--max-repair-attempts <n>', 'repair attempts per regression', '3')
   .option('--repeat <n>', 'runs per revision during verification', '3')
   .option('--timeout <ms>', 'per-test timeout in milliseconds', '60000')
-  .option('--out <dir>', 'output root directory', './out/loop')
+  .option('--out <dir>', 'run store root directory', './out/runs')
   .option('--apply-to-branch <name>', 'commit the fix on a branch in a temporary clone')
   .option('--no-cache', 'ignore cached analysis coverage')
   .action(async (options) => {
@@ -272,6 +264,132 @@ program
     });
 
     process.exitCode = result.exitCode;
+  });
+
+program
+  .command('report')
+  .description('Render a deterministic report for a stored run')
+  .requiredOption('--run <runId>', 'stored run id')
+  .option('--format <format>', 'md | html | comment', 'md')
+  .option('--out <file>', 'write to a file instead of stdout')
+  .action(async (options) => {
+    const dir = runDir(options.run);
+    let content: string;
+
+    if (options.format === 'md') content = await renderMarkdownReport(dir);
+    else if (options.format === 'comment') content = await renderPrComment(dir);
+    else if (options.format === 'html') content = await renderHtmlReport(dir);
+    else {
+      throw new Error(`Unknown format "${options.format}". Use md, html or comment.`);
+    }
+
+    if (options.out) {
+      const { mkdir: mkdirOut, writeFile: writeOut } = await import('node:fs/promises');
+      const target = path.resolve(options.out);
+      await mkdirOut(path.dirname(target), { recursive: true });
+      await writeOut(target, content.endsWith('\n') ? content : `${content}\n`, 'utf8');
+      console.log(`Wrote ${target}`);
+    } else {
+      console.log(content);
+    }
+  });
+
+const runsCommand = program
+  .command('runs')
+  .description('Run store commands');
+
+runsCommand
+  .command('import')
+  .description('Import recorded run directories into the store')
+  .argument('<dir>', 'directory of recorded runs')
+  .option('--out <dir>', 'run store root directory')
+  .action(async (dir, options) => {
+    if (options.out) process.env.TESTPILOT_RUNS_DIR = path.resolve(options.out);
+    const imported = await importRunsFrom(dir);
+    if (imported.length === 0) {
+      console.log(`No runs found in ${dir}.`);
+      return;
+    }
+    for (const run of imported) {
+      console.log(`${run.runId}  ${run.head}  ${run.verdict ?? '-'}  ${run.repairStatus ?? '-'}`);
+    }
+  });
+
+program
+  .command('serve')
+  .description('Serve the local report page (127.0.0.1 only)')
+  .option('--port <port>', 'port to bind', '4317')
+  .option('--runs-dir <dir>', 'run store root', './out/runs')
+  .action(async (options) => {
+    const server = await startServer({
+      port: parsePositiveInt(options.port, 'port'),
+      runsDir: options.runsDir
+    });
+    console.log(`TestPilot report server: ${server.url}`);
+    console.log('Press Ctrl-C to stop.');
+
+    const shutdown = async (): Promise<void> => {
+      await server.close();
+      process.exit(0);
+    };
+    process.once('SIGINT', shutdown);
+    process.once('SIGTERM', shutdown);
+  });
+
+program
+  .command('comment')
+  .description('Write a PR comment for a run (dry run unless --post)')
+  .requiredOption('--run <runId>', 'stored run id')
+  .option('--post', 'actually post with gh (requires --pr and --repo-slug)')
+  .option('--pr <number>', 'pull request number')
+  .option('--repo-slug <owner/name>', 'GitHub repository slug')
+  .action(async (options) => {
+    const dir = runDir(options.run);
+    const comment = await renderPrComment(dir);
+    const file = path.join(dir, 'pr-comment.md');
+    await writeFile(file, `${comment}\n`, 'utf8');
+
+    console.log(comment);
+    console.log(`\nSaved ${file}`);
+
+    if (!options.post) {
+      console.log('\n[dry run] Pass --post --pr <number> --repo-slug owner/name to post.');
+      return;
+    }
+    if (!options.pr || !options.repoSlug) {
+      throw new Error('--post requires --pr and --repo-slug');
+    }
+    if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(options.repoSlug)) {
+      throw new Error('--repo-slug must look like owner/name');
+    }
+
+    const auth = await execa('gh', ['auth', 'status'], { reject: false });
+    if (auth.exitCode !== 0) {
+      throw new Error('gh is not authenticated; the comment was saved but not posted.');
+    }
+
+    await execa('gh', [
+      'pr',
+      'comment',
+      parsePositiveInt(options.pr, 'pr').toString(),
+      '--repo',
+      options.repoSlug,
+      '--body-file',
+      file
+    ]);
+    console.log(`Posted comment to ${options.repoSlug}#${options.pr}.`);
+  });
+
+program
+  .command('mcp')
+  .description('Start the TestPilot MCP server (stdio by default)')
+  .option('--http', 'use streamable HTTP on 127.0.0.1 instead of stdio')
+  .option('--port <port>', 'HTTP port', '4318')
+  .action(async (options) => {
+    await startMcpServer({
+      http: options.http === true,
+      port: parsePositiveInt(options.port, 'port')
+    });
   });
 
 program

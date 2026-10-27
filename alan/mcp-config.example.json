@@ -1,0 +1,23 @@
+{
+  "_comment": [
+    "Generic MCP stdio configuration shape. Replace the TODO absolute paths.",
+    "Alan's exact config format is not known; adapt this mapping to it.",
+    "Never commit real API keys. Use your secret manager or environment."
+  ],
+  "mcpServers": {
+    "testpilot": {
+      "command": "npx",
+      "args": [
+        "tsx",
+        "/TODO/absolute/path/to/testpilot/src/mcp/server.ts"
+      ],
+      "env": {
+        "TESTPILOT_ALLOWED_REPOS": "/TODO/absolute/path/to/demo-shop",
+        "TESTPILOT_RUNS_DIR": "/TODO/absolute/path/to/testpilot/out/runs",
+        "TESTPILOT_PROVIDER": "google",
+        "GOOGLE_GENERATIVE_AI_API_KEY": "TODO-set-in-secret-manager",
+        "TESTPILOT_MCP_TIMEOUT_MS": "300000"
+      }
+    }
+  }
+}

@@ -7,13 +7,16 @@
     "dev": "tsx src/cli.ts",
     "build": "tsc --noEmit",
     "check-analysis": "tsx scripts/check-analysis.ts",
-    "test": "tsx --test --test-concurrency=1 src/generate/*.test.ts src/runner/*.test.ts src/repair/*.test.ts",
+    "test": "tsx --test --test-concurrency=1 src/generate/*.test.ts src/runner/*.test.ts src/repair/*.test.ts src/store/*.test.ts src/report/*.test.ts src/mcp/*.test.ts",
     "check-generation": "tsx scripts/check-generation.ts",
     "check-verification": "tsx scripts/check-verification.ts",
     "e2e-verification": "tsx scripts/e2e-verification.ts",
     "check-repair": "tsx scripts/check-repair.ts",
     "e2e-loop": "tsx scripts/e2e-loop.ts",
-    "demo": "tsx scripts/demo.ts"
+    "demo": "tsx scripts/demo.ts",
+    "mcp": "tsx src/mcp/server.ts",
+    "check-alan-integration": "tsx scripts/check-alan-integration.ts",
+    "demo:report": "tsx scripts/demo-report.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
@@ -24,6 +27,7 @@
     "@ai-sdk/anthropic": "^4.0.88",
     "@ai-sdk/google": "^4.0.105",
     "@ai-sdk/openai": "^4.0.102",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "ai": "^7.0.153",
     "commander": "^15.0.0",
     "dotenv": "^18.0.9",
@@ -31,5 +35,8 @@
     "ts-morph": "^28.0.0",
     "zod": "^4.6.7"
   },
-  "type": "module"
+  "type": "module",
+  "bin": {
+    "testpilot-mcp": "bin/testpilot-mcp.mjs"
+  }
 }

@@ -1,0 +1,152 @@
+{
+  "repo": "/Users/gurshaansinghdult/Developer/testpilot/demo-shop",
+  "base": {
+    "ref": "main",
+    "sha": "b62bb53107a2baceeccab4e62d3cafc3780d2fcc"
+  },
+  "head": {
+    "ref": "bug/payment-concurrency",
+    "sha": "06bf61b7f0e3d054b3dba3652d9f5d7e49d31628"
+  },
+  "generatedAt": "2026-10-27T05:49:03.391Z",
+  "baseline": {
+    "testFiles": [
+      {
+        "file": "src/api/checkoutHandler.test.ts",
+        "passed": true,
+        "durationMs": 19293
+      },
+      {
+        "file": "src/api/retryPayment.test.ts",
+        "passed": true,
+        "durationMs": 19095
+      },
+      {
+        "file": "src/auth/authService.test.ts",
+        "passed": true,
+        "durationMs": 19228
+      },
+      {
+        "file": "src/orders/orderService.test.ts",
+        "passed": true,
+        "durationMs": 19095
+      },
+      {
+        "file": "src/payments/processPayment.test.ts",
+        "passed": true,
+        "durationMs": 5724
+      },
+      {
+        "file": "src/users/userRepository.test.ts",
+        "passed": true,
+        "durationMs": 5694
+      }
+    ],
+    "failures": []
+  },
+  "changedFiles": [
+    {
+      "path": "src/payments/processPayment.ts",
+      "status": "modified",
+      "changedLineRanges": [
+        {
+          "start": 13,
+          "end": 13
+        }
+      ],
+      "diff": "diff --git a/src/payments/processPayment.ts b/src/payments/processPayment.ts\nindex d5e1a48..4e93ef6 100644\n--- a/src/payments/processPayment.ts\n+++ b/src/payments/processPayment.ts\n@@ -13,2 +13 @@ export async function processPayment(order: Order): Promise<PaymentResult> {\n-  await chargeCustomer(order);\n-  await markOrderPaid(order.id);\n+  await Promise.all([chargeCustomer(order), markOrderPaid(order.id)]);"
+    }
+  ],
+  "changedTestFiles": [],
+  "changedFunctions": [
+    {
+      "name": "processPayment",
+      "qualifiedName": "processPayment.processPayment",
+      "file": "src/payments/processPayment.ts",
+      "startLine": 12,
+      "endLine": 16,
+      "signature": "export async function processPayment(order: Order): Promise<PaymentResult>",
+      "diff": "@@ -13,2 +13 @@ export async function processPayment(order: Order): Promise<PaymentResult> {\n-  await chargeCustomer(order);\n-  await markOrderPaid(order.id);\n+  await Promise.all([chargeCustomer(order), markOrderPaid(order.id)]);",
+      "changedLineCoverage": {
+        "percentage": 100,
+        "coveredLines": [
+          13
+        ],
+        "uncoveredLines": []
+      },
+      "coveringTests": [
+        "src/api/checkoutHandler.test.ts",
+        "src/api/retryPayment.test.ts",
+        "src/payments/processPayment.test.ts"
+      ]
+    }
+  ],
+  "otherChanges": [],
+  "impactGraph": {
+    "nodes": [
+      {
+        "id": "processPayment.processPayment::src/payments/processPayment.ts",
+        "name": "processPayment",
+        "qualifiedName": "processPayment.processPayment",
+        "file": "src/payments/processPayment.ts",
+        "startLine": 12,
+        "endLine": 16,
+        "depth": 0,
+        "coveringTests": [
+          "src/api/checkoutHandler.test.ts",
+          "src/api/retryPayment.test.ts",
+          "src/payments/processPayment.test.ts"
+        ],
+        "testNameMatches": [
+          "src/payments/processPayment.test.ts"
+        ]
+      },
+      {
+        "id": "checkoutHandler.checkoutHandler::src/api/checkoutHandler.ts",
+        "name": "checkoutHandler",
+        "qualifiedName": "checkoutHandler.checkoutHandler",
+        "file": "src/api/checkoutHandler.ts",
+        "startLine": 15,
+        "endLine": 29,
+        "depth": 1,
+        "coveringTests": [
+          "src/api/checkoutHandler.test.ts"
+        ],
+        "testNameMatches": [
+          "src/api/checkoutHandler.test.ts"
+        ]
+      },
+      {
+        "id": "retryPayment.retryPayment::src/api/retryPayment.ts",
+        "name": "retryPayment",
+        "qualifiedName": "retryPayment.retryPayment",
+        "file": "src/api/retryPayment.ts",
+        "startLine": 4,
+        "endLine": 11,
+        "depth": 1,
+        "coveringTests": [
+          "src/api/retryPayment.test.ts"
+        ],
+        "testNameMatches": [
+          "src/api/retryPayment.test.ts"
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "from": "retryPayment.retryPayment::src/api/retryPayment.ts",
+        "to": "processPayment.processPayment::src/payments/processPayment.ts",
+        "file": "src/api/retryPayment.ts",
+        "line": 10
+      },
+      {
+        "from": "checkoutHandler.checkoutHandler::src/api/checkoutHandler.ts",
+        "to": "processPayment.processPayment::src/payments/processPayment.ts",
+        "file": "src/api/checkoutHandler.ts",
+        "line": 24
+      }
+    ]
+  },
+  "callersWithoutTests": [],
+  "unresolvedReferences": []
+}

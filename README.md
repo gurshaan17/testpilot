@@ -135,3 +135,60 @@ pick the first provider with an API key. Model overrides use
 `TESTPILOT_MODEL_GOOGLE`. Default model ids live in one map in
 `src/llm/client.ts` and should be re-verified against each provider's current
 model list before production use.
+
+## Reports and the run store
+
+Every `loop` / `run` execution is stored under `out/runs/<runId>/` with
+`run.json` plus `analysis.json`, `generation.json`, `verification.json`,
+`repair.json`, `timeline.json`, `fix.patch` and the generated test.
+`run.json` is updated at each stage so a caller can poll progress.
+
+```bash
+npm run dev -- runs import demo-artifacts
+npm run dev -- report --run <runId>                 # markdown
+npm run dev -- report --run <runId> --format html --out report.html
+npm run dev -- report --run <runId> --format comment
+npm run dev -- serve --port 4317                    # http://127.0.0.1:4317
+npm run demo:report                                 # recorded demo, no live calls
+```
+
+The HTML page is self-contained (inline CSS/JS, CSP, light/dark, escaped
+output) and ships with static fallbacks at `demo-artifacts/report-payment.html`
+and `demo-artifacts/report-user.html`.
+
+## MCP server
+
+```bash
+npm run dev -- mcp                 # stdio (default)
+npm run dev -- mcp --http --port 4318
+npx tsx src/mcp/server.ts          # same as the stdio server
+```
+
+| Tool | Use it when |
+| --- | --- |
+| `analyze_pull_request` | Start here: changed functions, callers, callers without tests. |
+| `generate_regression_tests` | Plan and generate base-validated tests for a run. |
+| `run_regression_tests` | Verify the generated test on base and head. |
+| `repair_regression` | Propose and verify a guarded fix for `regression_caught`. |
+| `get_verification_report` | Summary or full markdown report. |
+| `run_testpilot_loop` | Run the whole pipeline in the background. |
+| `get_run_status` | Poll stage, status and verdict. |
+
+A generic stdio config shape (with TODOs) is in
+`alan/mcp-config.example.json`. **Alan's exact config format is not known**;
+adapt that mapping and keep the key in your secret manager.
+
+The Alan skill lives at `alan/skills/testpilot-verify/SKILL.md`.
+
+## Security model
+
+- **Repo allowlist:** `TESTPILOT_ALLOWED_REPOS` (colon-separated) is resolved
+  with `realpath`; symlink escapes are rejected. Default is `../demo-shop`.
+- **Ref validation:** refs match `^[A-Za-z0-9._/@-]+$`, may not start with `-`,
+  and must resolve with `git rev-parse --verify`.
+- **Scrubbed environment:** every child runs with only PATH, a temp HOME,
+  TMPDIR, `NODE_ENV=test` and `CI=true`; provider keys are never visible.
+- **Escaped output:** repo and LLM text is escaped once in `esc()` for HTML and
+  fenced for markdown; reports contain no external requests.
+- **Localhost only:** the report server and streamable HTTP transport bind to
+  `127.0.0.1`, and artifact routes reject ids outside the run-store pattern.
