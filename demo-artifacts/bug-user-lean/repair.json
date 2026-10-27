@@ -1,0 +1,121 @@
+{
+  "status": "fixed_by_revert",
+  "reasons": [
+    "The generated test passes on the patched code.",
+    "The existing suite is green on the patched code.",
+    "The test file is byte-identical after patching."
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "proposal": {
+        "diagnosis": "Calling `.lean()` on `findById(userId)` returns a plain JavaScript object without model instance methods like `toPublicProfile()`. This causes callers such as `userProfileService.getPublicProfile` to throw a runtime error when invoking instance methods.",
+        "rootCause": {
+          "file": "src/users/userRepository.ts",
+          "function": "getUser",
+          "line": 36
+        },
+        "strategy": "Revert the `.lean()` call so `getUser` returns the full model instance with its methods intact.",
+        "edits": [
+          {
+            "file": "src/users/userRepository.ts",
+            "find": "  return findById(userId).lean();",
+            "replace": "  return findById(userId);"
+          }
+        ],
+        "preservesPrIntent": false,
+        "intentNote": "Reverting `.lean()` undoes the optimization to ensure User model instance methods such as `toPublicProfile` remain accessible to consumers."
+      },
+      "editsApplied": true,
+      "patch": "diff --git a/src/users/userRepository.ts b/src/users/userRepository.ts\nindex 2420089..9767e19 100644\n--- a/src/users/userRepository.ts\n+++ b/src/users/userRepository.ts\n@@ -33,7 +33,7 @@ function findById(id: string): Query<User> {\n }\n \n export async function getUser(userId: string): Promise<User> {\n-  return findById(userId).lean();\n+  return findById(userId);\n }\n \n export function seed(records: UserRecord[]): void {\n",
+      "patchStats": {
+        "filesChanged": 1,
+        "insertions": 1,
+        "deletions": 1,
+        "files": [
+          "src/users/userRepository.ts"
+        ]
+      },
+      "guards": [
+        {
+          "name": "onlySourceFiles",
+          "ok": true,
+          "reason": "Only existing source files under src/ are modified."
+        },
+        {
+          "name": "noTestTampering",
+          "ok": true,
+          "reason": "The test file is untouched and no test special-casing was added."
+        },
+        {
+          "name": "sizeBudget",
+          "ok": true,
+          "reason": "The fix changes 1 file(s) and 2 line(s)."
+        },
+        {
+          "name": "noHardcoding",
+          "ok": true,
+          "reason": "The fix does not hardcode the test expectations."
+        },
+        {
+          "name": "compiles",
+          "ok": true,
+          "reason": "The patched code type-checks."
+        }
+      ],
+      "verification": {
+        "verdict": "regression_caught",
+        "confidence": "medium",
+        "fixedCheck": "passed",
+        "fixedStatus": "passed",
+        "fixedExistingSuite": {
+          "ran": true,
+          "passed": 15,
+          "failed": 0,
+          "total": 15
+        },
+        "testFileIntact": true,
+        "reasons": [
+          "The test passed on base and failed on head with a behavioural failure.",
+          "Head failure type: runtime-error.",
+          "The failing test exercises the changed function.",
+          "The test passed on the fixed revision, confirming the bug was reverted."
+        ]
+      },
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "usage": {
+        "inputTokens": 1298,
+        "outputTokens": 746,
+        "totalTokens": 2044
+      },
+      "durationMs": 42996
+    }
+  ],
+  "patch": "diff --git a/src/users/userRepository.ts b/src/users/userRepository.ts\nindex 2420089..9767e19 100644\n--- a/src/users/userRepository.ts\n+++ b/src/users/userRepository.ts\n@@ -33,7 +33,7 @@ function findById(id: string): Query<User> {\n }\n \n export async function getUser(userId: string): Promise<User> {\n-  return findById(userId).lean();\n+  return findById(userId);\n }\n \n export function seed(records: UserRecord[]): void {\n",
+  "patchStats": {
+    "filesChanged": 1,
+    "insertions": 1,
+    "deletions": 1,
+    "files": [
+      "src/users/userRepository.ts"
+    ]
+  },
+  "filesTouched": [
+    "src/users/userRepository.ts"
+  ],
+  "restoresBase": true,
+  "preservesPrIntent": false,
+  "intentNote": "Reverting `.lean()` undoes the optimization to ensure User model instance methods such as `toPublicProfile` remain accessible to consumers.",
+  "provider": "google",
+  "model": "gemini-3.8-flash",
+  "totalUsage": {
+    "inputTokens": 1298,
+    "outputTokens": 746,
+    "totalTokens": 2044
+  },
+  "durations": {
+    "totalMs": 43125
+  },
+  "generatedAt": "2026-10-27T04:22:12.586Z"
+}

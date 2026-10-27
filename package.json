@@ -7,11 +7,13 @@
     "dev": "tsx src/cli.ts",
     "build": "tsc --noEmit",
     "check-analysis": "tsx scripts/check-analysis.ts",
-    "test": "tsx --test --test-concurrency=1 src/generate/*.test.ts src/runner/*.test.ts",
+    "test": "tsx --test --test-concurrency=1 src/generate/*.test.ts src/runner/*.test.ts src/repair/*.test.ts",
     "check-generation": "tsx scripts/check-generation.ts",
     "check-verification": "tsx scripts/check-verification.ts",
     "e2e-verification": "tsx scripts/e2e-verification.ts",
-    "check-repair": "tsx scripts/check-repair.ts"
+    "check-repair": "tsx scripts/check-repair.ts",
+    "e2e-loop": "tsx scripts/e2e-loop.ts",
+    "demo": "tsx scripts/demo.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

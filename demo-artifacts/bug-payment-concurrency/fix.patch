@@ -1,0 +1,14 @@
+diff --git a/src/payments/processPayment.ts b/src/payments/processPayment.ts
+index 4e93ef6..d5e1a48 100644
+--- a/src/payments/processPayment.ts
++++ b/src/payments/processPayment.ts
+@@ -10,7 +10,8 @@ export interface PaymentResult {
+  * Charges the customer first and only then records the order as paid.
+  */
+ export async function processPayment(order: Order): Promise<PaymentResult> {
+-  await Promise.all([chargeCustomer(order), markOrderPaid(order.id)]);
++  await chargeCustomer(order);
++  await markOrderPaid(order.id);
+ 
+   return { orderId: order.id, status: 'paid' };
+ }

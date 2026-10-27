@@ -1,0 +1,125 @@
+{
+  "testFile": "/Users/gurshaansinghdult/Developer/testpilot/testpilot/out/e2e-loop/google/bug-user-lean/run-1/bug-user-lean/__testpilot__/get-public-profile-calls-model-method.testpilot.test.ts",
+  "scenarioId": "get-public-profile-calls-model-method",
+  "scenarioTitle": "getPublicProfile retrieves public profile via user model method",
+  "verdict": "regression_caught",
+  "confidence": "medium",
+  "reasons": [
+    "The test passed on base and failed on head with a behavioural failure.",
+    "Head failure type: runtime-error.",
+    "The failing test exercises the changed function."
+  ],
+  "fixedCheck": "not_run",
+  "revisions": {
+    "base": {
+      "ref": "main",
+      "sha": "b62bb53107a2baceeccab4e62d3cafc3780d2fcc",
+      "runs": [
+        {
+          "status": "passed",
+          "tests": [
+            {
+              "title": "retrieves the public profile via the user model instance method",
+              "fullName": "getPublicProfile retrieves the public profile via the user model instance method",
+              "status": "passed",
+              "failureMessages": [],
+              "durationMs": 1
+            }
+          ],
+          "numPassed": 1,
+          "numFailed": 0,
+          "numTotal": 1,
+          "suiteFailedToRun": false,
+          "exitCode": 0,
+          "outputTail": "PASS __testpilot__/get-public-profile-calls-model-method.testpilot.test.ts\n  getPublicProfile\n    ✓ retrieves the public profile via the user model instance method (1 ms)\n\nTest Suites: 1 passed, 1 total\nTests:       1 passed, 1 total\nSnapshots:   0 total\nTime:        0.531 s\nRan all test suites within paths \"__testpilot__/get-public-profile-calls-model-method.testpilot.test.ts\".\nTest results written to: ../../../../../../../var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-jest-S1ZVoM/result.json"
+        },
+        {
+          "status": "passed",
+          "tests": [
+            {
+              "title": "retrieves the public profile via the user model instance method",
+              "fullName": "getPublicProfile retrieves the public profile via the user model instance method",
+              "status": "passed",
+              "failureMessages": [],
+              "durationMs": 1
+            }
+          ],
+          "numPassed": 1,
+          "numFailed": 0,
+          "numTotal": 1,
+          "suiteFailedToRun": false,
+          "exitCode": 0,
+          "outputTail": "PASS __testpilot__/get-public-profile-calls-model-method.testpilot.test.ts\n  getPublicProfile\n    ✓ retrieves the public profile via the user model instance method (1 ms)\n\nTest Suites: 1 passed, 1 total\nTests:       1 passed, 1 total\nSnapshots:   0 total\nTime:        0.446 s, estimated 1 s\nRan all test suites within paths \"__testpilot__/get-public-profile-calls-model-method.testpilot.test.ts\".\nTest results written to: ../../../../../../../var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-jest-MhZXNb/result.json"
+        }
+      ],
+      "consistentStatus": "passed",
+      "stable": true,
+      "changedCodeEvidence": "none",
+      "durationMs": 1869
+    },
+    "head": {
+      "ref": "bug/user-lean",
+      "sha": "15bade1787a76e6f40f11339bca56593432f14b6",
+      "runs": [
+        {
+          "status": "failed",
+          "tests": [
+            {
+              "title": "retrieves the public profile via the user model instance method",
+              "fullName": "getPublicProfile retrieves the public profile via the user model instance method",
+              "status": "failed",
+              "failureMessages": [
+                "TypeError: user.toPublicProfile is not a function\n    at getPublicProfile (/private/var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-wt-Kwnr4x/src/users/userProfileService.ts:7:15)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at Object.<anonymous> (/private/var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-wt-Kwnr4x/__testpilot__/get-public-profile-calls-model-method.testpilot.test.ts:19:21)"
+              ],
+              "failureType": "runtime-error",
+              "durationMs": 1
+            }
+          ],
+          "numPassed": 0,
+          "numFailed": 1,
+          "numTotal": 1,
+          "suiteFailedToRun": false,
+          "exitCode": 1,
+          "outputTail": "FAIL __testpilot__/get-public-profile-calls-model-method.testpilot.test.ts\n  getPublicProfile\n    ✕ retrieves the public profile via the user model instance method (1 ms)\n\n  ● getPublicProfile › retrieves the public profile via the user model instance method\n\n    TypeError: user.toPublicProfile is not a function\n\n    \u001b[0m \u001b[90m 5 |\u001b[39m )\u001b[33m:\u001b[39m \u001b[33mPromise\u001b[39m\u001b[33m<\u001b[39m{ id\u001b[33m:\u001b[39m string\u001b[33m;\u001b[39m displayName\u001b[33m:\u001b[39m string }\u001b[33m>\u001b[39m {\n     \u001b[90m 6 |\u001b[39m   \u001b[36mconst\u001b[39m user \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m getUser(userId)\u001b[33m;\u001b[39m\n    \u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 7 |\u001b[39m   \u001b[36mreturn\u001b[39m user\u001b[33m.\u001b[39mtoPublicProfile()\u001b[33m;\u001b[39m\n     \u001b[90m   |\u001b[39m               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n     \u001b[90m 8 |\u001b[39m }\n     \u001b[90m 9 |\u001b[39m\u001b[0m\n\n      at getPublicProfile (src/users/userProfileService.ts:7:15)\n      at Object.<anonymous> (__testpilot__/get-public-profile-calls-model-method.testpilot.test.ts:19:21)\n\nTest Suites: 1 failed, 1 total\nTests:       1 failed, 1 total\nSnapshots:   0 total\nTime:        0.574 s\nRan all test suites within paths \"__testpilot__/get-public-profile-calls-model-method.testpilot.test.ts\".\nTest results written to: ../../../../../../../var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-jest-AjCpVE/result.json"
+        },
+        {
+          "status": "failed",
+          "tests": [
+            {
+              "title": "retrieves the public profile via the user model instance method",
+              "fullName": "getPublicProfile retrieves the public profile via the user model instance method",
+              "status": "failed",
+              "failureMessages": [
+                "TypeError: user.toPublicProfile is not a function\n    at getPublicProfile (/private/var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-wt-Kwnr4x/src/users/userProfileService.ts:7:15)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at Object.<anonymous> (/private/var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-wt-Kwnr4x/__testpilot__/get-public-profile-calls-model-method.testpilot.test.ts:19:21)"
+              ],
+              "failureType": "runtime-error",
+              "durationMs": 1
+            }
+          ],
+          "numPassed": 0,
+          "numFailed": 1,
+          "numTotal": 1,
+          "suiteFailedToRun": false,
+          "exitCode": 1,
+          "outputTail": "FAIL __testpilot__/get-public-profile-calls-model-method.testpilot.test.ts\n  getPublicProfile\n    ✕ retrieves the public profile via the user model instance method (1 ms)\n\n  ● getPublicProfile › retrieves the public profile via the user model instance method\n\n    TypeError: user.toPublicProfile is not a function\n\n    \u001b[0m \u001b[90m 5 |\u001b[39m )\u001b[33m:\u001b[39m \u001b[33mPromise\u001b[39m\u001b[33m<\u001b[39m{ id\u001b[33m:\u001b[39m string\u001b[33m;\u001b[39m displayName\u001b[33m:\u001b[39m string }\u001b[33m>\u001b[39m {\n     \u001b[90m 6 |\u001b[39m   \u001b[36mconst\u001b[39m user \u001b[33m=\u001b[39m \u001b[36mawait\u001b[39m getUser(userId)\u001b[33m;\u001b[39m\n    \u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 7 |\u001b[39m   \u001b[36mreturn\u001b[39m user\u001b[33m.\u001b[39mtoPublicProfile()\u001b[33m;\u001b[39m\n     \u001b[90m   |\u001b[39m               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n     \u001b[90m 8 |\u001b[39m }\n     \u001b[90m 9 |\u001b[39m\u001b[0m\n\n      at getPublicProfile (src/users/userProfileService.ts:7:15)\n      at Object.<anonymous> (__testpilot__/get-public-profile-calls-model-method.testpilot.test.ts:19:21)\n\nTest Suites: 1 failed, 1 total\nTests:       1 failed, 1 total\nSnapshots:   0 total\nTime:        0.461 s, estimated 1 s\nRan all test suites within paths \"__testpilot__/get-public-profile-calls-model-method.testpilot.test.ts\".\nTest results written to: ../../../../../../../var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-jest-QsajqH/result.json"
+        }
+      ],
+      "consistentStatus": "failed",
+      "stable": true,
+      "failureType": "runtime-error",
+      "changedCodeEvidence": "coverage-of-changed-lines",
+      "durationMs": 1965
+    }
+  },
+  "existingSuite": {
+    "ran": true,
+    "passed": 15,
+    "failed": 0,
+    "total": 15
+  },
+  "isolation": "process",
+  "repeat": 2,
+  "timeoutMs": 60000,
+  "durationMs": 11962,
+  "generatedAt": "2026-10-27T04:21:29.276Z"
+}

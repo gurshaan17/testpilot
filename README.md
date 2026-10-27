@@ -59,6 +59,12 @@ npm run dev -- run --repo ../demo-shop --base main --head bug/user-lean \
 # Runner controls and end-to-end LLM evidence.
 npm run check-verification
 npm run e2e-verification
+npm run check-repair
+npm run e2e-loop
+
+# Replay a recorded run offline, or run the real thing.
+npm run demo -- --branch bug-user-lean
+npm run demo -- --live
 
 npm run build
 ```
@@ -95,6 +101,31 @@ a minimal environment, so provider keys are never visible to code under test.
 Confidence is `high` only for `regression_caught` with at least three stable runs
 on every revision and a failure location inside a changed file; `medium` when
 caught with fewer runs or no changed-file location; `low` for suspects.
+
+### Repair loop
+
+`testpilot loop` closes the circle: analyze -> generate -> verify -> repair ->
+re-verify. When a test is `regression_caught`, the repair agent proposes source
+edits; the verification runner decides whether the fix worked. The fix is only
+written as `fix.patch`, never into the analyzed repository's working tree.
+
+| Repair status | Meaning |
+| --- | --- |
+| `fixed` | Test passes on the patched code, the existing suite is green, and the test file is untouched. |
+| `fixed_by_revert` | As `fixed`, but the patched function body is identical to base after whitespace normalization. |
+| `failed` | Attempts exhausted; `repair.json` holds the best attempt's failure. |
+| `skipped` | The verdict was not `regression_caught`, so no repair was attempted. |
+
+Every proposed fix must pass these guards before any test runs:
+
+- `onlySourceFiles` - only existing files under `src/`, never tests, configs, lockfiles, scripts or CI.
+- `noTestTampering` - the test file is byte-identical and no test special-casing (`jest.mock`, `.skip`/`.only`, `NODE_ENV`/`JEST_WORKER_ID`) is added.
+- `sizeBudget` - at most 3 files and 60 changed lines.
+- `noHardcoding` - no test-assertion literals copied into source.
+- `compiles` - `tsc --noEmit` succeeds in the patched worktree.
+
+Add `--apply-to-branch <name>` to commit the fix on a branch inside a temporary
+clone; the analyzed repository is never modified and nothing is pushed.
 
 ## LLM providers
 
