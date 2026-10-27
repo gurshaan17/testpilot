@@ -9,11 +9,11 @@ import test from 'node:test';
 import { runSandboxed } from './exec';
 
 test('child process never sees provider keys or tokens', async () => {
-  process.env.ANTHROPIC_API_KEY = 'sk-test-secret';
-  process.env.OPENAI_API_KEY = 'sk-test-secret-2';
+  process.env.ANTHROPIC_API_KEY = 'dummy-secret';
+  process.env.OPENAI_API_KEY = 'dummy-secret-two';
   process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-secret-3';
-  process.env.GITHUB_TOKEN = 'ghp-test-secret';
-  process.env.MY_CUSTOM_TOKEN = 'custom-secret';
+  process.env.GITHUB_TOKEN = 'dummy-token';
+  process.env.MY_CUSTOM_TOKEN = 'dummy-custom';
 
   const result = await runSandboxed({
     cwd: process.cwd(),
