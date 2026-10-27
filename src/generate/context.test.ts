@@ -12,6 +12,8 @@ import {
   isForbiddenText,
   MAX_CONTEXT_CHARS
 } from './context';
+import { buildRepairContext } from '../repair/context';
+import type { VerificationResult } from '../runner/schema';
 
 const repoPath = path.resolve('../demo-shop');
 const branches = ['bug/payment-concurrency', 'bug/user-lean'];
@@ -65,3 +67,61 @@ for (const branch of branches) {
     }
   });
 }
+
+/**
+ * The repair prompt must obey the same answer-key rule as generation. This is
+ * the repair half of the existing leak guard.
+ */
+test('repair context leaks no answer key', { timeout: 180_000 }, async () => {
+  const report = await analyzeRepo({ repoPath, base: 'main', head: 'bug/user-lean' });
+  const changed = report.changedFunctions[0];
+  const base = await createWorktree(repoPath, 'main');
+  const head = await createWorktree(repoPath, 'bug/user-lean');
+
+  const verification = {
+    verdict: 'regression_caught',
+    reasons: ['failed on head'],
+    revisions: {
+      head: {
+        runs: [
+          {
+            tests: [
+              {
+                title: 'x',
+                fullName: 'x',
+                status: 'failed',
+                failureMessages: ['TypeError: user.toPublicProfile is not a function'],
+                failureType: 'runtime-error',
+                durationMs: 1
+              }
+            ],
+            outputTail: ''
+          }
+        ],
+        failureLocation: { file: 'src/users/userProfileService.ts', line: 7 }
+      }
+    }
+  } as unknown as VerificationResult;
+
+  try {
+    const context = buildRepairContext({
+      report,
+      baseWorktreeDir: base.dir,
+      headWorktreeDir: head.dir,
+      testFile: '__testpilot__/profile.testpilot.test.ts',
+      testSource: "expect(profile).toEqual({ id: 'usr_1' });",
+      verification
+    });
+
+    const serialized = JSON.stringify(context);
+    assert.doesNotMatch(serialized, /__testpilot__\/[\w.-]*reference/i);
+    assert.doesNotMatch(serialized, /regression-tests/i);
+    assert.doesNotMatch(serialized, /\breference\b/i);
+    assert.ok(context.function.baseBody);
+    assert.ok(context.function.headBody);
+    assert.equal(changed.file, context.function.file);
+  } finally {
+    await head.cleanup();
+    await base.cleanup();
+  }
+});

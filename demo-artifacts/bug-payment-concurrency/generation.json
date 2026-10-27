@@ -1,0 +1,89 @@
+{
+  "repo": "/Users/gurshaansinghdult/Developer/testpilot/demo-shop",
+  "base": {
+    "ref": "main",
+    "sha": "b62bb53107a2baceeccab4e62d3cafc3780d2fcc"
+  },
+  "head": {
+    "ref": "bug/payment-concurrency",
+    "sha": "06bf61b7f0e3d054b3dba3652d9f5d7e49d31628"
+  },
+  "generatedAt": "2026-10-27T04:17:42.331Z",
+  "provider": "google",
+  "model": "gemini-3.8-flash",
+  "promptVersion": "v2",
+  "scenarios": [
+    {
+      "id": "declined-charge-does-not-mark-order-paid",
+      "title": "Failed customer charge leaves order unpaid",
+      "risk": "Orders will be marked as paid in the store even when the payment gateway fails or rejects the transaction, leading to order fulfillment without payment.",
+      "kind": "failure-path",
+      "expectedBehaviorOnBase": "When chargeCustomer throws an error, execution stops immediately and markOrderPaid is never invoked, leaving the order in its initial status.",
+      "howChangeMayViolateIt": "With Promise.all, both chargeCustomer and markOrderPaid are invoked concurrently, causing markOrderPaid to execute and mutate the order state even when chargeCustomer rejects.",
+      "evidence": [
+        {
+          "file": "src/payments/processPayment.ts",
+          "line": 13,
+          "note": "Base code awaits chargeCustomer prior to invoking markOrderPaid."
+        },
+        {
+          "file": "src/payments/processPayment.ts",
+          "line": 14,
+          "note": "markOrderPaid is only called on line 14 after chargeCustomer resolves successfully."
+        }
+      ],
+      "severity": "high",
+      "testable": true,
+      "status": "valid",
+      "attempts": [
+        {
+          "attempt": 1,
+          "code": "import { processPayment } from '../src/payments/processPayment';\nimport { chargeCustomer } from '../src/payments/gateway';\nimport { createOrder, getOrder, __reset } from '../src/orders/orderRepository';\n\njest.mock('../src/payments/gateway');\n\nconst mockedChargeCustomer = jest.mocked(chargeCustomer);\n\ndescribe('processPayment - declined charge', () => {\n  beforeEach(() => {\n    __reset();\n    mockedChargeCustomer.mockReset();\n  });\n\n  it('does not mark order as paid when customer charge fails', async () => {\n    mockedChargeCustomer.mockRejectedValue(new Error('Card declined'));\n\n    const order = createOrder({\n      customerId: 'cus_1',\n      total: 50,\n      cardToken: 'tok_declined'\n    });\n\n    await expect(processPayment(order)).rejects.toThrow('Card declined');\n\n    const storedOrder = getOrder(order.id);\n    expect(storedOrder).toBeDefined();\n    expect(storedOrder?.status).toBe('pending');\n    expect(storedOrder?.status).not.toBe('paid');\n  });\n});\n",
+          "step": null,
+          "error": "",
+          "provider": "google",
+          "model": "gemini-3.8-flash",
+          "usage": {
+            "inputTokens": 4229,
+            "outputTokens": 3074,
+            "totalTokens": 7303
+          },
+          "durationMs": 23662
+        }
+      ],
+      "fileName": "__testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts",
+      "code": "import { processPayment } from '../src/payments/processPayment';\nimport { chargeCustomer } from '../src/payments/gateway';\nimport { createOrder, getOrder, __reset } from '../src/orders/orderRepository';\n\njest.mock('../src/payments/gateway');\n\nconst mockedChargeCustomer = jest.mocked(chargeCustomer);\n\ndescribe('processPayment - declined charge', () => {\n  beforeEach(() => {\n    __reset();\n    mockedChargeCustomer.mockReset();\n  });\n\n  it('does not mark order as paid when customer charge fails', async () => {\n    mockedChargeCustomer.mockRejectedValue(new Error('Card declined'));\n\n    const order = createOrder({\n      customerId: 'cus_1',\n      total: 50,\n      cardToken: 'tok_declined'\n    });\n\n    await expect(processPayment(order)).rejects.toThrow('Card declined');\n\n    const storedOrder = getOrder(order.id);\n    expect(storedOrder).toBeDefined();\n    expect(storedOrder?.status).toBe('pending');\n    expect(storedOrder?.status).not.toBe('paid');\n  });\n});\n",
+      "assumptions": [
+        "chargeCustomer is exported from '../src/payments/gateway' and can be mocked with jest.mock.",
+        "createOrder initializes the order status to 'pending' in the in-memory repository.",
+        "markOrderPaid mutates the stored order status to 'paid' synchronously when invoked."
+      ],
+      "testsWhat": "Verifies that when chargeCustomer throws an error during payment processing, execution halts and markOrderPaid is not executed, ensuring the order remains in pending status and is not marked as paid.",
+      "headPreview": {
+        "passed": false,
+        "error": "FAIL __testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts\n  ● processPayment - declined charge › does not mark order as paid when customer charge fails\n\n    expect(received).toBe(expected) // Object.is equality\n\n    Expected: \"pending\"\n    Received: \"paid\"\n\n      26 |     const storedOrder = getOrder(order.id);\n      27 |     expect(storedOrder).toBeDefined();\n    > 28 |     expect(storedOrder?.status).toBe('pending');\n         |                                 ^\n      29 |     expect(storedOrder?.status).not.toBe('paid');\n      30 |   });\n      31 | });\n\n      at Object.<anonymous> (__testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts:28:33)\n\nTest Suites: 1 failed, 1 total\nTests:       1 failed, 1 total\nSnapshots:   0 total\nTime:        0.688 s",
+        "durationMs": 1163
+      }
+    }
+  ],
+  "droppedEvidence": [],
+  "prompts": [
+    {
+      "kind": "plan",
+      "scenarioId": null,
+      "function": "processPayment.processPayment",
+      "file": "prompts/plan-processPayment.processPayment.txt"
+    },
+    {
+      "kind": "generate",
+      "scenarioId": "declined-charge-does-not-mark-order-paid",
+      "function": "processPayment.processPayment",
+      "file": "prompts/generate-declined-charge-does-not-mark-order-paid-attempt-1.txt"
+    }
+  ],
+  "totalUsage": {
+    "inputTokens": 8125,
+    "outputTokens": 5313,
+    "totalTokens": 13438
+  }
+}

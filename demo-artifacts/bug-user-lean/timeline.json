@@ -1,0 +1,35 @@
+{
+  "head": "bug/user-lean",
+  "base": "main",
+  "totalMs": 100179,
+  "events": [
+    {
+      "stage": "analyze",
+      "status": "ok",
+      "detail": "1 changed function(s)",
+      "durationMs": 393,
+      "at": "2026-10-27T04:20:32.807Z"
+    },
+    {
+      "stage": "generate",
+      "status": "ok",
+      "detail": "1 valid test(s)",
+      "durationMs": 44506,
+      "at": "2026-10-27T04:21:17.313Z"
+    },
+    {
+      "stage": "verify:get-public-profile-calls-model-method",
+      "status": "ok",
+      "detail": "regression_caught (medium)",
+      "durationMs": 12147,
+      "at": "2026-10-27T04:21:29.460Z"
+    },
+    {
+      "stage": "repair:get-public-profile-calls-model-method",
+      "status": "ok",
+      "detail": "fixed_by_revert",
+      "durationMs": 43130,
+      "at": "2026-10-27T04:22:12.591Z"
+    }
+  ]
+}

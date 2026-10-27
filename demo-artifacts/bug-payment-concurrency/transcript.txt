@@ -1,0 +1,31 @@
+[analyze] started
+[analyze] finished in 471ms - 1 changed function(s)
+[generate] started
+[generate] finished in 43118ms - 1 valid test(s)
+[verify:declined-charge-does-not-mark-order-paid] started
+[verify:declined-charge-does-not-mark-order-paid] finished in 10254ms - regression_caught (medium)
+[repair:declined-charge-does-not-mark-order-paid] started
+[repair:declined-charge-does-not-mark-order-paid] finished in 23107ms - fixed_by_revert
+
+======================================================================
+TestPilot loop summary
+  risk:      Failed customer charge leaves order unpaid
+  evidence:  base=passed head=failed [assertion] -> regression_caught
+             Error: expect(received).toBe(expected) // Object.is equality
+             
+             Expected: "pending"
+             Received: "paid"
+                 at Object.<anonymous> (/private/var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-wt-DSEwYt/__testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts:28:33)
+                 at processTicksAndRejections (node:internal/process/task_queues:104:5)
+  fix:
+             --- a/src/payments/processPayment.ts
+             +++ b/src/payments/processPayment.ts
+             @@ -10,7 +10,8 @@ export interface PaymentResult {
+             -  await Promise.all([chargeCustomer(order), markOrderPaid(order.id)]);
+             +  await chargeCustomer(order);
+             +  await markOrderPaid(order.id);
+  repair:    fixed_by_revert (attempts: 1)
+  proof:     test passes on the patched code; existing suite 15/15 green
+  flags:     fixed_by_revert (the fix reverts the change)
+  timeline:  /Users/gurshaansinghdult/Developer/testpilot/testpilot/out/e2e-loop/google/bug-payment-concurrency/run-1/bug-payment-concurrency/timeline.json
+======================================================================

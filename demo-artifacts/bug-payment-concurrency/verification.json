@@ -1,0 +1,125 @@
+{
+  "testFile": "/Users/gurshaansinghdult/Developer/testpilot/testpilot/out/e2e-loop/google/bug-payment-concurrency/run-1/bug-payment-concurrency/__testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts",
+  "scenarioId": "declined-charge-does-not-mark-order-paid",
+  "scenarioTitle": "Failed customer charge leaves order unpaid",
+  "verdict": "regression_caught",
+  "confidence": "medium",
+  "reasons": [
+    "The test passed on base and failed on head with a behavioural failure.",
+    "Head failure type: assertion.",
+    "The failing test exercises the changed function."
+  ],
+  "fixedCheck": "not_run",
+  "revisions": {
+    "base": {
+      "ref": "main",
+      "sha": "b62bb53107a2baceeccab4e62d3cafc3780d2fcc",
+      "runs": [
+        {
+          "status": "passed",
+          "tests": [
+            {
+              "title": "does not mark order as paid when customer charge fails",
+              "fullName": "processPayment - declined charge does not mark order as paid when customer charge fails",
+              "status": "passed",
+              "failureMessages": [],
+              "durationMs": 4
+            }
+          ],
+          "numPassed": 1,
+          "numFailed": 0,
+          "numTotal": 1,
+          "suiteFailedToRun": false,
+          "exitCode": 0,
+          "outputTail": "PASS __testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts\n  processPayment - declined charge\n    ✓ does not mark order as paid when customer charge fails (4 ms)\n\nTest Suites: 1 passed, 1 total\nTests:       1 passed, 1 total\nSnapshots:   0 total\nTime:        0.542 s\nRan all test suites within paths \"__testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts\".\nTest results written to: ../../../../../../../var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-jest-27NLGP/result.json"
+        },
+        {
+          "status": "passed",
+          "tests": [
+            {
+              "title": "does not mark order as paid when customer charge fails",
+              "fullName": "processPayment - declined charge does not mark order as paid when customer charge fails",
+              "status": "passed",
+              "failureMessages": [],
+              "durationMs": 3
+            }
+          ],
+          "numPassed": 1,
+          "numFailed": 0,
+          "numTotal": 1,
+          "suiteFailedToRun": false,
+          "exitCode": 0,
+          "outputTail": "PASS __testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts\n  processPayment - declined charge\n    ✓ does not mark order as paid when customer charge fails (3 ms)\n\nTest Suites: 1 passed, 1 total\nTests:       1 passed, 1 total\nSnapshots:   0 total\nTime:        0.439 s, estimated 1 s\nRan all test suites within paths \"__testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts\".\nTest results written to: ../../../../../../../var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-jest-oEX60o/result.json"
+        }
+      ],
+      "consistentStatus": "passed",
+      "stable": true,
+      "changedCodeEvidence": "none",
+      "durationMs": 2253
+    },
+    "head": {
+      "ref": "bug/payment-concurrency",
+      "sha": "06bf61b7f0e3d054b3dba3652d9f5d7e49d31628",
+      "runs": [
+        {
+          "status": "failed",
+          "tests": [
+            {
+              "title": "does not mark order as paid when customer charge fails",
+              "fullName": "processPayment - declined charge does not mark order as paid when customer charge fails",
+              "status": "failed",
+              "failureMessages": [
+                "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: \"pending\"\nReceived: \"paid\"\n    at Object.<anonymous> (/private/var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-wt-DSEwYt/__testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts:28:33)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)"
+              ],
+              "failureType": "assertion",
+              "durationMs": 4
+            }
+          ],
+          "numPassed": 0,
+          "numFailed": 1,
+          "numTotal": 1,
+          "suiteFailedToRun": false,
+          "exitCode": 1,
+          "outputTail": "FAIL __testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts\n  processPayment - declined charge\n    ✕ does not mark order as paid when customer charge fails (4 ms)\n\n  ● processPayment - declined charge › does not mark order as paid when customer charge fails\n\n    expect(received).toBe(expected) // Object.is equality\n\n    Expected: \"pending\"\n    Received: \"paid\"\n\n    \u001b[0m \u001b[90m 26 |\u001b[39m     \u001b[36mconst\u001b[39m storedOrder \u001b[33m=\u001b[39m getOrder(order\u001b[33m.\u001b[39mid)\u001b[33m;\u001b[39m\n     \u001b[90m 27 |\u001b[39m     expect(storedOrder)\u001b[33m.\u001b[39mtoBeDefined()\u001b[33m;\u001b[39m\n    \u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 28 |\u001b[39m     expect(storedOrder\u001b[33m?\u001b[39m\u001b[33m.\u001b[39mstatus)\u001b[33m.\u001b[39mtoBe(\u001b[32m'pending'\u001b[39m)\u001b[33m;\u001b[39m\n     \u001b[90m    |\u001b[39m                                 \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n     \u001b[90m 29 |\u001b[39m     expect(storedOrder\u001b[33m?\u001b[39m\u001b[33m.\u001b[39mstatus)\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoBe(\u001b[32m'paid'\u001b[39m)\u001b[33m;\u001b[39m\n     \u001b[90m 30 |\u001b[39m   })\u001b[33m;\u001b[39m\n     \u001b[90m 31 |\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m\n\n      at Object.<anonymous> (__testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts:28:33)\n\nTest Suites: 1 failed, 1 total\nTests:       1 failed, 1 total\nSnapshots:   0 total\nTime:        0.536 s\nRan all test suites within paths \"__testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts\".\nTest results written to: ../../../../../../../var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-jest-aT77FG/result.json"
+        },
+        {
+          "status": "failed",
+          "tests": [
+            {
+              "title": "does not mark order as paid when customer charge fails",
+              "fullName": "processPayment - declined charge does not mark order as paid when customer charge fails",
+              "status": "failed",
+              "failureMessages": [
+                "Error: expect(received).toBe(expected) // Object.is equality\n\nExpected: \"pending\"\nReceived: \"paid\"\n    at Object.<anonymous> (/private/var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-wt-DSEwYt/__testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts:28:33)\n    at processTicksAndRejections (node:internal/process/task_queues:104:5)"
+              ],
+              "failureType": "assertion",
+              "durationMs": 4
+            }
+          ],
+          "numPassed": 0,
+          "numFailed": 1,
+          "numTotal": 1,
+          "suiteFailedToRun": false,
+          "exitCode": 1,
+          "outputTail": "FAIL __testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts\n  processPayment - declined charge\n    ✕ does not mark order as paid when customer charge fails (4 ms)\n\n  ● processPayment - declined charge › does not mark order as paid when customer charge fails\n\n    expect(received).toBe(expected) // Object.is equality\n\n    Expected: \"pending\"\n    Received: \"paid\"\n\n    \u001b[0m \u001b[90m 26 |\u001b[39m     \u001b[36mconst\u001b[39m storedOrder \u001b[33m=\u001b[39m getOrder(order\u001b[33m.\u001b[39mid)\u001b[33m;\u001b[39m\n     \u001b[90m 27 |\u001b[39m     expect(storedOrder)\u001b[33m.\u001b[39mtoBeDefined()\u001b[33m;\u001b[39m\n    \u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 28 |\u001b[39m     expect(storedOrder\u001b[33m?\u001b[39m\u001b[33m.\u001b[39mstatus)\u001b[33m.\u001b[39mtoBe(\u001b[32m'pending'\u001b[39m)\u001b[33m;\u001b[39m\n     \u001b[90m    |\u001b[39m                                 \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n     \u001b[90m 29 |\u001b[39m     expect(storedOrder\u001b[33m?\u001b[39m\u001b[33m.\u001b[39mstatus)\u001b[33m.\u001b[39mnot\u001b[33m.\u001b[39mtoBe(\u001b[32m'paid'\u001b[39m)\u001b[33m;\u001b[39m\n     \u001b[90m 30 |\u001b[39m   })\u001b[33m;\u001b[39m\n     \u001b[90m 31 |\u001b[39m })\u001b[33m;\u001b[39m\u001b[0m\n\n      at Object.<anonymous> (__testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts:28:33)\n\nTest Suites: 1 failed, 1 total\nTests:       1 failed, 1 total\nSnapshots:   0 total\nTime:        0.478 s, estimated 1 s\nRan all test suites within paths \"__testpilot__/declined-charge-does-not-mark-order-paid.testpilot.test.ts\".\nTest results written to: ../../../../../../../var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-jest-pZnyKw/result.json"
+        }
+      ],
+      "consistentStatus": "failed",
+      "stable": true,
+      "failureType": "assertion",
+      "changedCodeEvidence": "coverage-of-changed-lines",
+      "durationMs": 2023
+    }
+  },
+  "existingSuite": {
+    "ran": true,
+    "passed": 15,
+    "failed": 0,
+    "total": 15
+  },
+  "isolation": "process",
+  "repeat": 2,
+  "timeoutMs": 60000,
+  "durationMs": 10148,
+  "generatedAt": "2026-10-27T04:17:52.570Z"
+}

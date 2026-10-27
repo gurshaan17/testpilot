@@ -1,0 +1,28 @@
+[analyze] started
+[analyze] finished in 393ms - 1 changed function(s)
+[generate] started
+[generate] finished in 44506ms - 1 valid test(s)
+[verify:get-public-profile-calls-model-method] started
+[verify:get-public-profile-calls-model-method] finished in 12147ms - regression_caught (medium)
+[repair:get-public-profile-calls-model-method] started
+[repair:get-public-profile-calls-model-method] finished in 43130ms - fixed_by_revert
+
+======================================================================
+TestPilot loop summary
+  risk:      getPublicProfile retrieves public profile via user model method
+  evidence:  base=passed head=failed [runtime-error] -> regression_caught
+             TypeError: user.toPublicProfile is not a function
+                 at getPublicProfile (/private/var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-wt-Kwnr4x/src/users/userProfileService.ts:7:15)
+                 at processTicksAndRejections (node:internal/process/task_queues:104:5)
+                 at Object.<anonymous> (/private/var/folders/pd/jcpcswfj3q14p97hv27t7kbm0000gn/T/testpilot-wt-Kwnr4x/__testpilot__/get-public-profile-calls-model-method.testpilot.test.ts:19:21)
+  fix:
+             --- a/src/users/userRepository.ts
+             +++ b/src/users/userRepository.ts
+             @@ -33,7 +33,7 @@ function findById(id: string): Query<User> {
+             -  return findById(userId).lean();
+             +  return findById(userId);
+  repair:    fixed_by_revert (attempts: 1)
+  proof:     test passes on the patched code; existing suite 15/15 green
+  flags:     fixed_by_revert (the fix reverts the change)
+  timeline:  /Users/gurshaansinghdult/Developer/testpilot/testpilot/out/e2e-loop/google/bug-user-lean/run-1/bug-user-lean/timeline.json
+======================================================================

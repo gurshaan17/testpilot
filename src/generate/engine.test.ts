@@ -117,7 +117,7 @@ test('generation pipeline writes valid test, log and prompts', { timeout: 240_00
     assert.match(await readFile(testFile, 'utf8'), /getPublicProfile/);
 
     const logged = JSON.parse(await readFile(run.generationPath, 'utf8'));
-    assert.equal(logged.promptVersion, 'v1');
+    assert.equal(logged.promptVersion, 'v2');
     assert.equal(logged.scenarios[0].status, 'valid');
     assert.equal(logged.scenarios[0].headPreview.passed, false);
     assert.equal(logged.totalUsage.totalTokens, 60);

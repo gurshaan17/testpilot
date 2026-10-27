@@ -1,0 +1,13 @@
+diff --git a/src/users/userRepository.ts b/src/users/userRepository.ts
+index 2420089..9767e19 100644
+--- a/src/users/userRepository.ts
++++ b/src/users/userRepository.ts
+@@ -33,7 +33,7 @@ function findById(id: string): Query<User> {
+ }
+ 
+ export async function getUser(userId: string): Promise<User> {
+-  return findById(userId).lean();
++  return findById(userId);
+ }
+ 
+ export function seed(records: UserRecord[]): void {

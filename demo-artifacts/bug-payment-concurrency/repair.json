@@ -1,0 +1,121 @@
+{
+  "status": "fixed_by_revert",
+  "reasons": [
+    "The generated test passes on the patched code.",
+    "The existing suite is green on the patched code.",
+    "The test file is byte-identical after patching."
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "proposal": {
+        "diagnosis": "processPayment ran chargeCustomer and markOrderPaid concurrently using Promise.all, which causes the order to be marked as paid even if charging the customer fails.",
+        "rootCause": {
+          "file": "src/payments/processPayment.ts",
+          "function": "processPayment",
+          "line": 13
+        },
+        "strategy": "Revert to awaiting chargeCustomer before calling markOrderPaid so that orders are only marked paid upon a successful charge.",
+        "edits": [
+          {
+            "file": "src/payments/processPayment.ts",
+            "find": "  await Promise.all([chargeCustomer(order), markOrderPaid(order.id)]);",
+            "replace": "  await chargeCustomer(order);\n  await markOrderPaid(order.id);"
+          }
+        ],
+        "preservesPrIntent": false,
+        "intentNote": "The PR intent was to run charging and marking as paid concurrently, but marking as paid depends on charging succeeding first."
+      },
+      "editsApplied": true,
+      "patch": "diff --git a/src/payments/processPayment.ts b/src/payments/processPayment.ts\nindex 4e93ef6..d5e1a48 100644\n--- a/src/payments/processPayment.ts\n+++ b/src/payments/processPayment.ts\n@@ -10,7 +10,8 @@ export interface PaymentResult {\n  * Charges the customer first and only then records the order as paid.\n  */\n export async function processPayment(order: Order): Promise<PaymentResult> {\n-  await Promise.all([chargeCustomer(order), markOrderPaid(order.id)]);\n+  await chargeCustomer(order);\n+  await markOrderPaid(order.id);\n \n   return { orderId: order.id, status: 'paid' };\n }\n",
+      "patchStats": {
+        "filesChanged": 1,
+        "insertions": 2,
+        "deletions": 1,
+        "files": [
+          "src/payments/processPayment.ts"
+        ]
+      },
+      "guards": [
+        {
+          "name": "onlySourceFiles",
+          "ok": true,
+          "reason": "Only existing source files under src/ are modified."
+        },
+        {
+          "name": "noTestTampering",
+          "ok": true,
+          "reason": "The test file is untouched and no test special-casing was added."
+        },
+        {
+          "name": "sizeBudget",
+          "ok": true,
+          "reason": "The fix changes 1 file(s) and 3 line(s)."
+        },
+        {
+          "name": "noHardcoding",
+          "ok": true,
+          "reason": "The fix does not hardcode the test expectations."
+        },
+        {
+          "name": "compiles",
+          "ok": true,
+          "reason": "The patched code type-checks."
+        }
+      ],
+      "verification": {
+        "verdict": "regression_caught",
+        "confidence": "medium",
+        "fixedCheck": "passed",
+        "fixedStatus": "passed",
+        "fixedExistingSuite": {
+          "ran": true,
+          "passed": 15,
+          "failed": 0,
+          "total": 15
+        },
+        "testFileIntact": true,
+        "reasons": [
+          "The test passed on base and failed on head with a behavioural failure.",
+          "Head failure type: assertion.",
+          "The failing test exercises the changed function.",
+          "The test passed on the fixed revision, confirming the bug was reverted."
+        ]
+      },
+      "provider": "google",
+      "model": "gemini-3.8-flash",
+      "usage": {
+        "inputTokens": 1597,
+        "outputTokens": 649,
+        "totalTokens": 2246
+      },
+      "durationMs": 23020
+    }
+  ],
+  "patch": "diff --git a/src/payments/processPayment.ts b/src/payments/processPayment.ts\nindex 4e93ef6..d5e1a48 100644\n--- a/src/payments/processPayment.ts\n+++ b/src/payments/processPayment.ts\n@@ -10,7 +10,8 @@ export interface PaymentResult {\n  * Charges the customer first and only then records the order as paid.\n  */\n export async function processPayment(order: Order): Promise<PaymentResult> {\n-  await Promise.all([chargeCustomer(order), markOrderPaid(order.id)]);\n+  await chargeCustomer(order);\n+  await markOrderPaid(order.id);\n \n   return { orderId: order.id, status: 'paid' };\n }\n",
+  "patchStats": {
+    "filesChanged": 1,
+    "insertions": 2,
+    "deletions": 1,
+    "files": [
+      "src/payments/processPayment.ts"
+    ]
+  },
+  "filesTouched": [
+    "src/payments/processPayment.ts"
+  ],
+  "restoresBase": true,
+  "preservesPrIntent": false,
+  "intentNote": "The PR intent was to run charging and marking as paid concurrently, but marking as paid depends on charging succeeding first.",
+  "provider": "google",
+  "model": "gemini-3.8-flash",
+  "totalUsage": {
+    "inputTokens": 1597,
+    "outputTokens": 649,
+    "totalTokens": 2246
+  },
+  "durations": {
+    "totalMs": 23103
+  },
+  "generatedAt": "2026-10-27T04:18:15.781Z"
+}

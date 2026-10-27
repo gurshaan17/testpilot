@@ -1,0 +1,220 @@
+/**
+ * The full loop: analyze -> generate -> verify -> repair -> re-verify.
+ * Emits a timeline and a readable progress view; the fix is only ever written
+ * to fix.patch, never to the analyzed repository's working tree.
+ */
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { analyzeRepo } from './analysis/analyze';
+import type { AnalysisReport } from './analysis/schema';
+import { generateTests, type GenerationRun } from './generate/engine';
+import { sanitizeRef } from './generate/naming';
+import type { ProviderName } from './llm/client';
+import { verifyTest } from './runner/verify';
+import type { VerificationResult } from './runner/schema';
+import { repairRegression } from './repair/loop';
+import type { RepairResult } from './repair/schema';
+import { applyFixToClone } from './repair/clone';
+import { printLoopSummary } from './loopReport';
+
+export interface TimelineEvent {
+  stage: string;
+  status: 'ok' | 'failed' | 'skipped';
+  detail?: string;
+  durationMs: number;
+  at: string;
+}
+
+export interface LoopOptions {
+  repoPath: string;
+  base: string;
+  head: string;
+  provider?: ProviderName;
+  model?: string;
+  maxScenarios?: number;
+  maxRepairAttempts?: number;
+  repeat?: number;
+  timeoutMs?: number;
+  out?: string;
+  applyToBranch?: string;
+  noCache?: boolean;
+  log?: (line: string) => void;
+}
+
+export interface LoopResult {
+  outDir: string;
+  analysis: AnalysisReport;
+  generation: GenerationRun;
+  verifications: VerificationResult[];
+  repairs: RepairResult[];
+  events: TimelineEvent[];
+  exitCode: number;
+  appliedTo?: { cloneDir: string; branch: string; commit: string };
+}
+
+export async function runLoop(options: LoopOptions): Promise<LoopResult> {
+  const log = options.log ?? ((line: string) => console.log(line));
+  const repoPath = path.resolve(options.repoPath);
+  const outRoot = options.out ?? './out/loop';
+  const events: TimelineEvent[] = [];
+  const startedAll = Date.now();
+
+  const stage = async <T>(
+    name: string,
+    fn: () => Promise<T>,
+    describe?: (value: T) => string
+  ): Promise<T> => {
+    const startedAt = Date.now();
+    log(`[${name}] started`);
+    try {
+      const value = await fn();
+      const durationMs = Date.now() - startedAt;
+      events.push({
+        stage: name,
+        status: 'ok',
+        detail: describe?.(value),
+        durationMs,
+        at: new Date().toISOString()
+      });
+      log(`[${name}] finished in ${durationMs}ms${describe ? ` - ${describe(value)}` : ''}`);
+      return value;
+    } catch (error) {
+      const durationMs = Date.now() - startedAt;
+      events.push({
+        stage: name,
+        status: 'failed',
+        detail: (error as Error).message,
+        durationMs,
+        at: new Date().toISOString()
+      });
+      log(`[${name}] failed in ${durationMs}ms - ${(error as Error).message}`);
+      throw error;
+    }
+  };
+
+  const analysis = await stage(
+    'analyze',
+    () =>
+      analyzeRepo({
+        repoPath,
+        base: options.base,
+        head: options.head,
+        noCache: options.noCache
+      }),
+    (report) => `${report.changedFunctions.length} changed function(s)`
+  );
+
+  const outDir = path.resolve(outRoot, sanitizeRef(options.head));
+  const generation = await stage(
+    'generate',
+    () =>
+      generateTests({
+        repoPath,
+        base: options.base,
+        head: options.head,
+        report: analysis,
+        provider: options.provider,
+        model: options.model,
+        maxScenarios: options.maxScenarios ?? 1,
+        outRoot
+      }),
+    (run) => `${run.scenarios.filter((scenario) => scenario.status === 'valid').length} valid test(s)`
+  );
+
+  const validScenarios = generation.scenarios.filter(
+    (scenario) => scenario.status === 'valid' && scenario.fileName
+  );
+
+  const verifications: VerificationResult[] = [];
+  for (const scenario of validScenarios) {
+    const result = await stage(
+      `verify:${scenario.id}`,
+      () =>
+        verifyTest({
+          repoPath,
+          base: options.base,
+          head: options.head,
+          testFile: path.join(outDir, scenario.fileName as string),
+          analysisReport: analysis,
+          scenarioId: scenario.id,
+          scenarioTitle: scenario.title,
+          repeat: options.repeat ?? 3,
+          timeoutMs: options.timeoutMs
+        }),
+      (verification) => `${verification.verdict} (${verification.confidence})`
+    );
+    verifications.push(result);
+    await mkdir(outDir, { recursive: true });
+    await writeFile(
+      path.join(outDir, 'verification.json'),
+      `${JSON.stringify(result, null, 2)}\n`,
+      'utf8'
+    );
+  }
+
+  const repairs: RepairResult[] = [];
+  for (const verification of verifications) {
+    const result = await stage(
+      `repair:${verification.scenarioId ?? 'unknown'}`,
+      () =>
+        repairRegression({
+          repoPath,
+          base: options.base,
+          head: options.head,
+          verification,
+          analysisReport: analysis,
+          testFile: verification.testFile,
+          provider: options.provider,
+          model: options.model,
+          maxAttempts: options.maxRepairAttempts ?? 3,
+          repeat: options.repeat ?? 3,
+          timeoutMs: options.timeoutMs,
+          outDir
+        }),
+      (repair) => repair.status
+    );
+    repairs.push(result);
+  }
+
+  const fixed = repairs.some(
+    (repair) => repair.status === 'fixed' || repair.status === 'fixed_by_revert'
+  );
+  const caught = verifications.some((verification) => verification.verdict === 'regression_caught');
+  const exitCode = fixed ? 0 : caught ? 2 : 3;
+
+  const result: LoopResult = {
+    outDir,
+    analysis,
+    generation,
+    verifications,
+    repairs,
+    events,
+    exitCode
+  };
+
+  if (options.applyToBranch) {
+    const patch = repairs.find((repair) => repair.patch)?.patch;
+    if (patch) {
+      result.appliedTo = await applyFixToClone({
+        repoPath,
+        head: options.head,
+        branch: options.applyToBranch,
+        patch
+      });
+    }
+  }
+
+  await mkdir(outDir, { recursive: true });
+  await writeFile(
+    path.join(outDir, 'timeline.json'),
+    `${JSON.stringify(
+      { head: options.head, base: options.base, totalMs: Date.now() - startedAll, events },
+      null,
+      2
+    )}\n`,
+    'utf8'
+  );
+
+  printLoopSummary({ result, log });
+  return result;
+}

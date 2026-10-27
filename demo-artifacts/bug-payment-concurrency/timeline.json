@@ -1,0 +1,35 @@
+{
+  "head": "bug/payment-concurrency",
+  "base": "main",
+  "totalMs": 76952,
+  "events": [
+    {
+      "stage": "analyze",
+      "status": "ok",
+      "detail": "1 changed function(s)",
+      "durationMs": 471,
+      "at": "2026-10-27T04:16:59.304Z"
+    },
+    {
+      "stage": "generate",
+      "status": "ok",
+      "detail": "1 valid test(s)",
+      "durationMs": 43118,
+      "at": "2026-10-27T04:17:42.422Z"
+    },
+    {
+      "stage": "verify:declined-charge-does-not-mark-order-paid",
+      "status": "ok",
+      "detail": "regression_caught (medium)",
+      "durationMs": 10254,
+      "at": "2026-10-27T04:17:52.676Z"
+    },
+    {
+      "stage": "repair:declined-charge-does-not-mark-order-paid",
+      "status": "ok",
+      "detail": "fixed_by_revert",
+      "durationMs": 23107,
+      "at": "2026-10-27T04:18:15.785Z"
+    }
+  ]
+}

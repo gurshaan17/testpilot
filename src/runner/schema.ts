@@ -83,13 +83,30 @@ export const VerificationResultSchema = z.object({
   verdict: VerdictSchema,
   confidence: ConfidenceSchema,
   reasons: z.array(z.string()),
-  fixedCheck: z.enum(['passed', 'still_failing', 'not_run', 'flaky', 'invalid']),
+  fixedCheck: z.enum([
+    'passed',
+    'still_failing',
+    'not_run',
+    'flaky',
+    'invalid',
+    'patch_failed'
+  ]),
   revisions: z.object({
     base: RevisionResultSchema,
     head: RevisionResultSchema,
     fixed: RevisionResultSchema.optional()
   }),
   existingSuite: ExistingSuiteSchema,
+  fixedExistingSuite: ExistingSuiteSchema.optional(),
+  testFileIntact: z.boolean().optional(),
+  fixedPatchStats: z
+    .object({
+      filesChanged: z.number().int(),
+      insertions: z.number().int(),
+      deletions: z.number().int(),
+      files: z.array(z.string())
+    })
+    .optional(),
   isolation: z.enum(['process', 'docker']),
   repeat: z.number().int(),
   timeoutMs: z.number().int(),
