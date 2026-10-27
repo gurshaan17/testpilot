@@ -14,7 +14,9 @@
     "check-repair": "tsx scripts/check-repair.ts",
     "e2e-loop": "tsx scripts/e2e-loop.ts",
     "demo": "tsx scripts/demo.ts",
-    "mcp": "tsx src/mcp/server.ts"
+    "mcp": "tsx src/mcp/server.ts",
+    "check-alan-integration": "tsx scripts/check-alan-integration.ts",
+    "demo:report": "tsx scripts/demo-report.ts"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
