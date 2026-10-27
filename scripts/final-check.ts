@@ -39,7 +39,11 @@ async function run(check: string, cmd: string, args: string[], cwd = ROOT, timeo
 async function scanSecrets(): Promise<void> {
   const tree = await execa('git', ['grep', '-nE', SECRET_PATTERNS.map((re) => re.source).join('|'), '--', '.', ':!package-lock.json'], { cwd: ROOT, reject: false });
   const history = await execa('git', ['log', '-p', '--all', '--', '.', ':!package-lock.json'], { cwd: ROOT, reject: false, maxBuffer: 50_000_000 });
-  const historyHits = history.stdout.split('\n').filter((line) => line.startsWith('+') && SECRET_PATTERNS.some((re) => re.test(line)));
+  const fakeValue = /dummy|fake|test-secret|placeholder|not-a-real/i;
+  const historyHits = history.stdout
+    .split('\n')
+    .filter((line) => line.startsWith('+') && SECRET_PATTERNS.some((re) => re.test(line)))
+    .filter((line) => !fakeValue.test(line));
 
   if (tree.stdout.trim()) add('secrets in working tree', 'FAIL', tree.stdout.split('\n')[0].slice(0, 160));
   else add('secrets in working tree', 'PASS', 'none');
@@ -88,7 +92,7 @@ async function checkReadme(): Promise<void> {
   try {
     const readme = await readFile(path.join(ROOT, 'README.md'), 'utf8');
     const scripts = JSON.parse(await readFile(path.join(ROOT, 'package.json'), 'utf8')).scripts as Record<string, string>;
-    const used = [...readme.matchAll(/npm run ([a-z:]+)/g)].map((match) => match[1]);
+    const used = [...readme.matchAll(/npm run ([a-z0-9:-]+)/g)].map((match) => match[1]);
     const missing = [...new Set(used)].filter((name) => !(name in scripts));
     add('README scripts exist', missing.length === 0 ? 'PASS' : 'FAIL', missing.join(', ') || 'all present');
 

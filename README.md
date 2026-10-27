@@ -113,8 +113,7 @@ source and `n` for each one.
 - Average wall-clock per stage (n=4): generate **56,261 ms**, repair **30,797 ms**, verify **12,804 ms**, analyze **717 ms**.
 - Generation acceptance was blocked at the time (no provider keys); the later live loop runs superseded it.
 
-The live numbers come from one provider (Google, `gemini-3.8-flash`) on two planted
-bugs. They are not a benchmark across models or repositories.
+The live numbers come from one provider (Google) on two planted bugs. They are not a benchmark across models or repositories.
 
 ## Known limitations
 
