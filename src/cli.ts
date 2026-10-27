@@ -29,6 +29,8 @@ import type { VerificationResult } from './runner/schema';
 import { runPipeline } from './runCommand';
 import { importRunsFrom, runDir } from './store/runs';
 import { renderMarkdownReport, renderPrComment } from './report/markdown';
+import { renderHtmlReport } from './report/html';
+import { startServer } from './server';
 import {
   AnalysisReportSchema,
   type AnalysisReport,
@@ -274,9 +276,8 @@ program
 
     if (options.format === 'md') content = await renderMarkdownReport(dir);
     else if (options.format === 'comment') content = await renderPrComment(dir);
-    else if (options.format === 'html') {
-      throw new Error('HTML rendering is provided by the report server milestone');
-    } else {
+    else if (options.format === 'html') content = await renderHtmlReport(dir);
+    else {
       throw new Error(`Unknown format "${options.format}". Use md, html or comment.`);
     }
 
@@ -310,6 +311,27 @@ runsCommand
     for (const run of imported) {
       console.log(`${run.runId}  ${run.head}  ${run.verdict ?? '-'}  ${run.repairStatus ?? '-'}`);
     }
+  });
+
+program
+  .command('serve')
+  .description('Serve the local report page (127.0.0.1 only)')
+  .option('--port <port>', 'port to bind', '4317')
+  .option('--runs-dir <dir>', 'run store root', './out/runs')
+  .action(async (options) => {
+    const server = await startServer({
+      port: parsePositiveInt(options.port, 'port'),
+      runsDir: options.runsDir
+    });
+    console.log(`TestPilot report server: ${server.url}`);
+    console.log('Press Ctrl-C to stop.');
+
+    const shutdown = async (): Promise<void> => {
+      await server.close();
+      process.exit(0);
+    };
+    process.once('SIGINT', shutdown);
+    process.once('SIGTERM', shutdown);
   });
 
 program
