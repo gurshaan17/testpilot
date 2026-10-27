@@ -2,6 +2,8 @@
  * Verification pipeline: runs a generated test against base, head and an
  * optional fixed revision, then classifies the outcome from runner output.
  */
+import { copyFile, mkdir, readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import type { AnalysisReport } from '../analysis/schema';
 import { createWorktree, type Worktree } from './worktree';
@@ -185,6 +187,26 @@ export async function verifyTest(
       ? await runExistingSuite({ worktreeDir: fixedWorktree.dir, timeoutMs })
       : undefined;
 
+    // The generated test must be byte-identical in the patched worktree.
+    let testFileIntact: boolean | undefined;
+    if (fixedWorktree) {
+      try {
+        const relative = `__testpilot__/${path.basename(options.testFile)}`;
+        const target = path.join(fixedWorktree.dir, relative);
+        await mkdir(path.dirname(target), { recursive: true });
+        await copyFile(path.resolve(options.testFile), target);
+        const [original, patched] = await Promise.all([
+          readFile(path.resolve(options.testFile)),
+          readFile(target)
+        ]);
+        testFileIntact =
+          createHash('sha256').update(original).digest('hex') ===
+          createHash('sha256').update(patched).digest('hex');
+      } catch {
+        testFileIntact = false;
+      }
+    }
+
     let evidence = changedCodeEvidence({
       head,
       analysisReport: options.analysisReport,
@@ -235,6 +257,7 @@ export async function verifyTest(
       existingSuite: existing.suite,
       fixedExistingSuite: fixedExisting?.suite,
       fixedPatchStats,
+      testFileIntact,
       isolation,
       repeat,
       timeoutMs,

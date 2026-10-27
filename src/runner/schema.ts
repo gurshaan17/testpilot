@@ -98,6 +98,7 @@ export const VerificationResultSchema = z.object({
   }),
   existingSuite: ExistingSuiteSchema,
   fixedExistingSuite: ExistingSuiteSchema.optional(),
+  testFileIntact: z.boolean().optional(),
   fixedPatchStats: z
     .object({
       filesChanged: z.number().int(),
