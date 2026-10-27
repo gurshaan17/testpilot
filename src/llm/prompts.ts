@@ -5,8 +5,9 @@
 import type { ContextPack } from '../generate/context';
 import { scenarioFileName } from '../generate/naming';
 import type { Scenario } from '../generate/plan';
+import type { RepairContext } from '../repair/context';
 
-export const PROMPT_VERSION = 'v1';
+export const PROMPT_VERSION = 'v2';
 
 export interface PromptPair {
   system: string;
@@ -137,4 +138,61 @@ export function buildRepairPrompt(
       block('VALIDATION_ERROR', error)
     ].join('\n')
   };
+}
+
+function repairSections(context: RepairContext): string {
+  return [
+    block('CHANGED_FUNCTION', context.function),
+    block('CHANGED_FILES', context.changedFiles),
+    block('DIRECT_CALLERS', context.directCallers),
+    block('FAILING_TEST', context.test),
+    block('HEAD_FAILURE', context.failure),
+    context.guardFeedback ? block('PREVIOUS_GUARD_REJECTION', context.guardFeedback) : '',
+    context.previousAttempt
+      ? block('PREVIOUS_ATTEMPT', context.previousAttempt)
+      : ''
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+export function buildSourceRepairPrompt(context: RepairContext): PromptPair {
+  const system = [
+    'You are TestPilot, a senior engineer fixing a regression in source code.',
+    guard(),
+    'The base revision is the oracle: the failing test describes behavior that was true',
+    'before the change. Propose the smallest correct source change that restores it.',
+    'Never modify tests, test helpers, configuration, lockfiles, scripts or CI.',
+    'Preserve the change intent where possible; if the only correct fix restores the old',
+    'behavior, say so plainly and set preservesPrIntent=false.',
+    'Return only the structured object requested by the schema.'
+  ].join('\n');
+
+  const prompt = [
+    'Diagnose the regression and propose exact find/replace edits.',
+    '',
+    '<INSTRUCTIONS>',
+    '- Fix SOURCE code only. Never touch tests, jest/ts config or package.json.',
+    '- Each edit must have a `find` string that occurs EXACTLY ONCE in its file.',
+    '- Keep edits minimal: at most 3 files and 60 changed lines.',
+    '- Do not special-case tests (no NODE_ENV/JEST_WORKER_ID branches, no jest.mock).',
+    '- Do not hardcode values copied from the test assertions.',
+    '- rootCause.file and rootCause.function must name the real source location.',
+    '- preservesPrIntent is false when the fix reverts the change.',
+    '- intentNote explains the trade-off briefly.',
+    '</INSTRUCTIONS>',
+    '',
+    context.guardFeedback
+      ? `The previous attempt was rejected by guards: ${context.guardFeedback}`
+      : '',
+    context.previousAttempt
+      ? 'A previous patch failed verification; see PREVIOUS_ATTEMPT.'
+      : '',
+    '',
+    repairSections(context)
+  ]
+    .filter((line) => line !== undefined)
+    .join('\n');
+
+  return { system, prompt };
 }
