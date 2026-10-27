@@ -40,6 +40,8 @@ export interface LoopOptions {
   out?: string;
   applyToBranch?: string;
   noCache?: boolean;
+  /** Reuse a run created by the caller (MCP returns its id immediately). */
+  runId?: string;
   log?: (line: string) => void;
 }
 
@@ -62,13 +64,15 @@ export async function runLoop(options: LoopOptions): Promise<LoopResult> {
   const events: TimelineEvent[] = [];
   const startedAll = Date.now();
 
-  const run = await createRun({
-    repoPath,
-    base: options.base,
-    head: options.head,
-    provider: options.provider,
-    model: options.model
-  });
+  const run = options.runId
+    ? await updateRun(options.runId, { status: 'running', stage: 'queued' })
+    : await createRun({
+        repoPath,
+        base: options.base,
+        head: options.head,
+        provider: options.provider,
+        model: options.model
+      });
   const outDir = runDir(run.runId);
 
   const stage = async <T>(
