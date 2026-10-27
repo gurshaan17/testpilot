@@ -5,6 +5,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { Command } from 'commander';
+import { execa } from 'execa';
 import { config } from 'dotenv';
 import { z } from 'zod';
 import { analyzeRepo } from './analysis/analyze';
@@ -333,6 +334,50 @@ program
     };
     process.once('SIGINT', shutdown);
     process.once('SIGTERM', shutdown);
+  });
+
+program
+  .command('comment')
+  .description('Write a PR comment for a run (dry run unless --post)')
+  .requiredOption('--run <runId>', 'stored run id')
+  .option('--post', 'actually post with gh (requires --pr and --repo-slug)')
+  .option('--pr <number>', 'pull request number')
+  .option('--repo-slug <owner/name>', 'GitHub repository slug')
+  .action(async (options) => {
+    const dir = runDir(options.run);
+    const comment = await renderPrComment(dir);
+    const file = path.join(dir, 'pr-comment.md');
+    await writeFile(file, `${comment}\n`, 'utf8');
+
+    console.log(comment);
+    console.log(`\nSaved ${file}`);
+
+    if (!options.post) {
+      console.log('\n[dry run] Pass --post --pr <number> --repo-slug owner/name to post.');
+      return;
+    }
+    if (!options.pr || !options.repoSlug) {
+      throw new Error('--post requires --pr and --repo-slug');
+    }
+    if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(options.repoSlug)) {
+      throw new Error('--repo-slug must look like owner/name');
+    }
+
+    const auth = await execa('gh', ['auth', 'status'], { reject: false });
+    if (auth.exitCode !== 0) {
+      throw new Error('gh is not authenticated; the comment was saved but not posted.');
+    }
+
+    await execa('gh', [
+      'pr',
+      'comment',
+      parsePositiveInt(options.pr, 'pr').toString(),
+      '--repo',
+      options.repoSlug,
+      '--body-file',
+      file
+    ]);
+    console.log(`Posted comment to ${options.repoSlug}#${options.pr}.`);
   });
 
 program
